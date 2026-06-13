@@ -8,8 +8,10 @@
 #define VP_RENDERER_H
 
 #include <cstdint>
+#include <vector>
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+
 #include "log.hpp"
 
 namespace vp {
@@ -29,8 +31,11 @@ namespace vp {
                 bool            createInstance();
                 void            destroyInstance();
 
+                bool            pickPhysicalDevice();
 
-                VkInstance      m_instance = VK_NULL_HANDLE;    ///< Vulkan instance used by the renderer
+
+                VkInstance              m_instance = VK_NULL_HANDLE;            ///< Vulkan instance used by the renderer
+                VkPhysicalDevice        m_physDevice = VK_NULL_HANDLE;          ///< Physical device used by the renderer
         };
 
 }

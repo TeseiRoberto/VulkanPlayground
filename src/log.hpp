@@ -11,7 +11,7 @@
 #define RED_TEXT_COLOR          "\033[0;31m"
 #define WHITE_TEXT_COLOR        "\033[0;37m"
 
-#define LOF_INFO(msg, ...)       fprintf(stdout, GREEN_TEXT_COLOR  "[ INFO ] " msg WHITE_TEXT_COLOR "\n", ##__VA_ARGS__);
+#define LOG_INFO(msg, ...)       fprintf(stdout, GREEN_TEXT_COLOR  "[ INFO ] " msg WHITE_TEXT_COLOR "\n", ##__VA_ARGS__);
 #define LOG_WARN(msg, ...)       fprintf(stderr, YELLOW_TEXT_COLOR "[ WARNING ] " msg WHITE_TEXT_COLOR "\n", ##__VA_ARGS__);
 #define LOG_ERROR(msg, ...)      fprintf(stderr, RED_TEXT_COLOR "[ ERROR ] " msg WHITE_TEXT_COLOR "\n", ##__VA_ARGS__);
 
