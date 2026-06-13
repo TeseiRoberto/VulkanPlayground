@@ -37,6 +37,18 @@ namespace vp {
                         return false;
                 }
 
+                if( !loadQueueFamilyIndices() )
+                {
+                        terminate();
+                        return false;
+                }
+
+                if( !createLogicalDevice() )
+                {
+                        terminate();
+                        return false;
+                }
+
                 // TODO: Add other stuff...
                 
                 return true;
@@ -50,15 +62,18 @@ namespace vp {
         void Renderer::terminate()
         {
                 // TODO: Add other stuff...
+                
+                destroyLogicalDevice();
+                unloadQueueFamilyIndices();
                 destroyInstance();
         }
 
 
         /**
          * @brief Renderer::createInstance
-         * @return True on success, false on failure
          * Initializes the vulkan instance to be used by the renderer.
          * The instance is the connection between the application and the Vulkan API (driver)
+         * @return True on success, false on failure
         */
         bool Renderer::createInstance()
         {
@@ -132,7 +147,7 @@ namespace vp {
 
                 if( vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr) != VK_SUCCESS )
                 {
-                        LOG_ERROR("Renderer::init() failed: cannot get number of available physical devices, vkEnumeratePhysicalDevices failed!");
+                        LOG_ERROR("Renderer::init() failed: cannot get number of available physical devices, vkEnumeratePhysicalDevices() failed!");
                         return false;
                 }
 
@@ -145,7 +160,7 @@ namespace vp {
                 std::vector<VkPhysicalDevice> devices(deviceCount);
                 if( vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data()) != VK_SUCCESS )
                 {
-                        LOG_ERROR("Renderer::init() failed: cannot get physical devices, vkEnumeratePhysicalDevices failed!");
+                        LOG_ERROR("Renderer::init() failed: cannot get physical devices, vkEnumeratePhysicalDevices() failed!");
                         return false;
                 }
 
@@ -169,6 +184,78 @@ namespace vp {
                 }
 
                 return true;
+        }
+
+
+        /**
+         * @brief Renderer::loadQueueFamilyIndices
+         * Queries queue families supported by the physical device and tries to load indices to
+         * the family queues required by the renderer
+         * @return True if the physical device supports the queue families required by the handler
+         * and indices to them are loaded successfully, false otherwise
+        */
+        bool Renderer::loadQueueFamilyIndices()
+        {
+                uint32_t queueFamilyCount = 0;
+
+                // Get number of queue families supported by the physical device
+                vkGetPhysicalDeviceQueueFamilyProperties(m_physDevice, &queueFamilyCount, nullptr);
+
+                if(queueFamilyCount == 0)
+                {
+                        LOG_ERROR("Renderer::init() failed: physical device, does not support any queue family!");
+                        return false;
+                }
+
+                std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+
+                // Get properties of all queue families supported by the physical device
+                vkGetPhysicalDeviceQueueFamilyProperties(m_physDevice, &queueFamilyCount, queueFamilies.data());
+
+                // Search for a queue family that support graphics operations
+                for(uint32_t i = 0; i < queueFamilyCount; ++i)
+                {
+                        // Check if current family is a graphic queue family which supports presentation to a window too
+                        if( queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT &&
+                                glfwGetPhysicalDevicePresentationSupport(m_instance, m_physDevice, i) )
+                        {
+                                m_queueFamilyIndices.graphicQueueIndex = i;
+                                break;
+                        }
+                }
+
+                return (m_queueFamilyIndices.graphicQueueIndex != UINT32_MAX);
+        }
+
+
+        /**
+         * @brief Renderer::unloadQueueFamilyIndices
+         * Resets the queue family indices loaded by the renderer to dummy values
+        */
+        void Renderer::unloadQueueFamilyIndices()
+        {
+                m_queueFamilyIndices.graphicQueueIndex = UINT32_MAX;
+        }
+
+
+        /**
+         * @brief Renderer::createLogicalDevice
+         * Creates the logical device used by the renderer
+         * @return True if a logical device has been created successfully, false otherwise
+        */
+        bool Renderer::createLogicalDevice()
+        {
+                // TODO: Add implementation...
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyLogicalDevice
+        */
+        void Renderer::destroyLogicalDevice()
+        {
+                // TODO: Add implementation...
         }
 
 }
