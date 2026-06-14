@@ -18,6 +18,7 @@ int main()
         }
 
         // Create window
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         GLFWwindow* wnd = glfwCreateWindow(720, 480, "Vulkan playground", NULL, NULL);
         if(wnd == nullptr)
         {
@@ -30,7 +31,7 @@ int main()
 
         // Create renderer
         vp::Renderer renderer;
-        if( !renderer.init() )
+        if( !renderer.init(wnd) )
         {
                 glfwDestroyWindow(wnd);
                 glfwTerminate();

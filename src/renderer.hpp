@@ -22,7 +22,7 @@ namespace vp {
                 explicit        Renderer() = default;
                                 ~Renderer();
 
-                bool            init();
+                bool            init(GLFWwindow* wnd);
                 void            terminate();
 
                 inline bool     isInit() const          { return m_instance != VK_NULL_HANDLE; }
@@ -49,6 +49,9 @@ namespace vp {
                 bool            createLogicalDevice();
                 void            destroyLogicalDevice();
 
+                bool            createSurface(GLFWwindow* wnd);
+                void            destroySurface();
+
 
                 VkInstance              m_instance = VK_NULL_HANDLE;            ///< Vulkan instance used by the renderer
                 VkPhysicalDevice        m_physDevice = VK_NULL_HANDLE;          ///< Physical device used by the renderer
@@ -56,6 +59,8 @@ namespace vp {
 
                 QueueFamilyIndices      m_queueFamilyIndices;                   ///< Indices to queue families required by the renderer
                 VkQueue                 m_gfxQueue = VK_NULL_HANDLE;            ///< Graphic queue to which the renderer submits commands
+        
+                VkSurfaceKHR            m_surface = VK_NULL_HANDLE;             ///< Surface on which the render will draw
         };
 
 }

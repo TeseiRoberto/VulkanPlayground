@@ -23,10 +23,11 @@ namespace vp {
         /**
          * @brief Renderer::init
          * Initializes the renderer
+         * @param wnd Window in which the renderer will draw
          * @return true on success, false on failure
          * @note GLFW must be initialized before this method is called!
         */
-        bool Renderer::init()
+        bool Renderer::init(GLFWwindow* wnd)
         {
                 if( !createInstance() )
                         return false;
@@ -49,6 +50,12 @@ namespace vp {
                         return false;
                 }
 
+                if( !createSurface(wnd) )
+                {
+                        terminate();
+                        return false;
+                }
+
                 // TODO: Add other stuff...
                 
                 return true;
@@ -62,7 +69,8 @@ namespace vp {
         void Renderer::terminate()
         {
                 // TODO: Add other stuff...
-                
+
+                destroySurface();
                 destroyLogicalDevice();
                 unloadQueueFamilyIndices();
                 destroyInstance();
@@ -301,7 +309,7 @@ namespace vp {
 
         /**
          * @brief Renderer::destroyLogicalDevice
-         * Destroys the logical device used by the renderer
+         * Destroys the logical device and the queues used by the renderer
         */
         void Renderer::destroyLogicalDevice()
         {
@@ -310,7 +318,49 @@ namespace vp {
 
                 vkDestroyDevice(m_logicDevice, nullptr);
                 m_logicDevice = VK_NULL_HANDLE;
+                m_gfxQueue = VK_NULL_HANDLE;
         }
+
+
+        /**
+         * @brief Renderer::createSurface
+         * Creates the surface on which the renderer will draw
+         * @param wnd Window for which the surface shall be created
+         * @return True on success, false on failure
+        */
+        bool Renderer::createSurface(GLFWwindow* wnd)
+        {
+                if(wnd == nullptr)
+                {
+                        LOG_ERROR("Renderer::init() failed: cannot create surface, given window is nullptr!");
+                        return false;
+                }
+
+                if( glfwCreateWindowSurface(m_instance, wnd, nullptr, &m_surface) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::init() failed: cannot create surface, glfwCreateWindowSurface() failed!");
+                        return false;
+                }
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::createSurface
+         * Creates the surface on which the renderer will draw
+         * @param wnd Window for which the surface shall be created
+         * @return True on success, false on failure
+        */
+        void Renderer::destroySurface()
+        {
+                if(m_surface == VK_NULL_HANDLE)
+                        return;
+        
+                vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+                m_surface = VK_NULL_HANDLE;
+        }
+
 
 }
 
