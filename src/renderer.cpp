@@ -245,17 +245,71 @@ namespace vp {
         */
         bool Renderer::createLogicalDevice()
         {
-                // TODO: Add implementation...
+                // List of device extensions required by the renderer
+                std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+                // Set features to be used (Vulkan 1.0, 1.2 and 1.3 versions)
+                VkPhysicalDeviceVulkan12Features enabledVk12Features {};
+                enabledVk12Features.sType                                       = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+                enabledVk12Features.descriptorIndexing                          = true;
+                enabledVk12Features.shaderSampledImageArrayNonUniformIndexing   = true;
+                enabledVk12Features.descriptorBindingVariableDescriptorCount    = true;
+                enabledVk12Features.runtimeDescriptorArray                      = true;
+                enabledVk12Features.bufferDeviceAddress                         = true;
+
+                VkPhysicalDeviceVulkan13Features enabledVk13Features {};
+                enabledVk13Features.sType                                       = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+                enabledVk13Features.pNext                                       = &enabledVk12Features;
+                enabledVk13Features.synchronization2                            = true;
+                enabledVk13Features.dynamicRendering                            = true;
+
+                VkPhysicalDeviceFeatures enabledVk10Features {};
+                enabledVk10Features.samplerAnisotropy                           = true;
+
+                const float queuePriorities[] = { 1.0f };
+                
+                // Create structs to describe queues required by the renderer
+                VkDeviceQueueCreateInfo queueInfo {};
+                queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                queueInfo.queueFamilyIndex = m_queueFamilyIndices.graphicQueueIndex;
+                queueInfo.queueCount = 1;
+                queueInfo.pQueuePriorities = queuePriorities;
+
+                // Create struct to describe the logical device to be created
+                VkDeviceCreateInfo deviceInfo {};
+                deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+                deviceInfo.pNext = &enabledVk13Features;
+                deviceInfo.queueCreateInfoCount = 1;
+                deviceInfo.pQueueCreateInfos = &queueInfo;
+                deviceInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+                deviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
+                deviceInfo.pEnabledFeatures = &enabledVk10Features;
+
+                // Create the logical device
+                if( vkCreateDevice(m_physDevice, &deviceInfo, nullptr, &m_logicDevice) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::init() failed: logical device could not be created, vkCreateDevice() failed");
+                        return false;
+                }
+
+                // Retrieve handle to the graphic queue
+                vkGetDeviceQueue(m_logicDevice, m_queueFamilyIndices.graphicQueueIndex, 0, &m_gfxQueue);
+
                 return true;
         }
 
 
         /**
          * @brief Renderer::destroyLogicalDevice
+         * Destroys the logical device used by the renderer
         */
         void Renderer::destroyLogicalDevice()
         {
-                // TODO: Add implementation...
+                if(m_logicDevice == VK_NULL_HANDLE)
+                        return;
+
+                vkDestroyDevice(m_logicDevice, nullptr);
+                m_logicDevice = VK_NULL_HANDLE;
         }
 
 }
