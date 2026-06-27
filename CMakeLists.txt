@@ -13,8 +13,10 @@ set(TARGET_NAME vulkanPlayground)
 set(SRCS
         src/main.cpp
 
-        src/renderer.hpp
-        src/renderer.cpp
+        src/graphics/vulkanContext.hpp
+        src/graphics/vulkanContext.cpp
+        src/graphics/renderer.hpp
+        src/graphics/renderer.cpp
 )
 
 add_executable(${TARGET_NAME} ${SRCS})

@@ -12,6 +12,7 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 
+#include "vulkanContext.hpp"
 #include "log.hpp"
 
 namespace vp {
@@ -25,18 +26,9 @@ namespace vp {
                 bool            init(GLFWwindow* wnd);
                 void            terminate();
 
-                inline bool     isInit() const          { return m_instance != VK_NULL_HANDLE; }
+                inline bool     isInit() const          { return m_context.isInit(); }
 
         private:
-
-                /**
-                 * @struct QueueFamilyIndices
-                 * Utility struct used to keep track of indices to Queue families
-                */
-                struct QueueFamilyIndices {
-                        uint32_t        graphicQueueIndex = UINT32_MAX;         ///< Index to the graphic queue family
-                };
-
 
                 /**
                  * @struct SwapchainProps
@@ -67,17 +59,6 @@ namespace vp {
                 };
 
 
-                bool            createInstance();
-                void            destroyInstance();
-
-                bool            pickPhysicalDevice();
-
-                bool            loadQueueFamilyIndices();
-                void            unloadQueueFamilyIndices();
-
-                bool            createLogicalDevice();
-                void            destroyLogicalDevice();
-
                 bool            createSurface(GLFWwindow* wnd);
                 void            destroySurface();
 
@@ -87,6 +68,9 @@ namespace vp {
                 bool            createDepthAttachment();
                 void            destroyDepthAttachment();
 
+                bool            createGraphicsPipeline();
+                void            destroyGraphicsPipeline();
+
                 bool            createImage(Image& image, uint32_t width, uint32_t height, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
@@ -95,19 +79,14 @@ namespace vp {
                 uint32_t        findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props);
 
 
-                VkInstance              m_instance = VK_NULL_HANDLE;                    ///< Vulkan instance used by the renderer
-                VkPhysicalDevice        m_physDevice = VK_NULL_HANDLE;                  ///< Physical device used by the renderer
-                VkDevice                m_logicDevice = VK_NULL_HANDLE;                 ///< Logical device used by the renderer
+                VulkanContext           m_context;                                      ///< Vulkan context instance used by the renderer
 
-                QueueFamilyIndices      m_queueFamilyIndices;                           ///< Indices to queue families required by the renderer
-                VkQueue                 m_gfxQueue = VK_NULL_HANDLE;                    ///< Graphic queue to which the renderer submits commands
-        
                 VkSurfaceKHR            m_surface = VK_NULL_HANDLE;                     ///< Surface on which images produced by the renderer will be presented
                 
                 SwapchainProps          m_swapchainProps;                               ///< Properties of the swapchain used by the renderer
                 VkSwapchainKHR          m_swapchain = VK_NULL_HANDLE;                   ///< Swapchain that owns images on which renderer will draw
                 std::vector<VkImage>    m_swapchainImages;                              ///< Handles to images owned by the swapchain that the renderer is using
-        
+
                 Image                   m_depthAttachment;                              ///< Image used to implement depth test
                 VkImageView             m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
         };
