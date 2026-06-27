@@ -5,7 +5,7 @@
 */
 
 
-#include "renderer.hpp"
+#include "graphics/renderer.hpp"
 #include "log.hpp"
 #include <GLFW/glfw3.h>
 
