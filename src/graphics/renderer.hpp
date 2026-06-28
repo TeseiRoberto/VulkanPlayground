@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 
 #include "vulkanContext.hpp"
+#include "vulkanShader.hpp"
 #include "log.hpp"
 
 namespace vp {
@@ -89,6 +90,8 @@ namespace vp {
 
                 Image                   m_depthAttachment;                              ///< Image used to implement depth test
                 VkImageView             m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
+        
+                VkPipelineLayout        m_pipelineLayout = VK_NULL_HANDLE;              ///< Describes the resources used by the renderer's graphics pipeline
         };
 
 }
