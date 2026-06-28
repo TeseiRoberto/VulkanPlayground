@@ -396,16 +396,193 @@ namespace vp {
         }
 
 
+        /**
+         * @brief Renderer::createGraphicsPipeline
+         * Creates the graphics pipeline to be used by the renderer.
+         * @return True on success, false on failure
+         * @note The VkGraphicsPipeline is a vulkan object used to describe all the stages (both
+         * programmable and fixed function stages) of the graphics pipeline.
+         * Such object is used to configure (set) the GPU hardware before invoking rendering operations.
+        */
         bool Renderer::createGraphicsPipeline()
         {
-                // TODO: Add implementation...
+                // TODO: Implement a public API to manage the graphics pipeline stages configuration and shaders
+
+                VulkanShader vertShader(&m_context);
+                VulkanShader fragShader(&m_context);
+
+                vertShader.loadFromBinary("../resources/shaders/bin/vertexShader.spv", VulkanShader::Type::VERTEX);
+                fragShader.loadFromBinary("../resources/shaders/bin/fragmentShader.spv", VulkanShader::Type::FRAGMENT);
+
+                if( !vertShader.isValid() || !fragShader.isValid() )
+                {
+                        LOG_ERROR("Renderer::init() failed: failed to create graphics pipeline, vertex/fragment shader loading failed!");
+                        return false;
+                }
+
+                // Create structs to specify the programmable stages of the pipeline
+                VkPipelineShaderStageCreateInfo shaderStagesInfo[2] = {};
+
+                shaderStagesInfo[0].sType       = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+                shaderStagesInfo[0].stage       = VK_SHADER_STAGE_VERTEX_BIT;
+                shaderStagesInfo[0].module      = vertShader.getModule();
+                shaderStagesInfo[0].pName       = "main";
+
+                shaderStagesInfo[1].sType       = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+                shaderStagesInfo[1].stage       = VK_SHADER_STAGE_FRAGMENT_BIT;
+                shaderStagesInfo[1].module      = fragShader.getModule();
+                shaderStagesInfo[1].pName       = "main";
+
+                // ====================[ Vertex input description (fixed function stage) ]====================
+                // This struct describes how vertices are passed as input to the vertex shader, this is similar to glVertexAttribPointer() call in OpenGL API
+                VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
+
+                vertexInputInfo.sType                                   = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+                vertexInputInfo.vertexBindingDescriptionCount           = 0;
+                vertexInputInfo.pVertexBindingDescriptions              = nullptr;
+                vertexInputInfo.vertexAttributeDescriptionCount         = 0;
+                vertexInputInfo.pVertexAttributeDescriptions            = nullptr;
+
+                // ====================[ Input assembly stage (fixed function stage) ]====================
+                // This stage describes how vertices are grouped toghether to create primitives
+                VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo {};
+
+                inputAssemblyInfo.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+                inputAssemblyInfo.topology                              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+                inputAssemblyInfo.primitiveRestartEnable                = VK_FALSE;
+                
+                // ====================[ Viewport and scissor region description (fixed function stage) ]====================
+                // The viewport struct describes the dimensions of the viewport (the viewport defines how a rendered image is mapped onto the framebuffer).
+                // The Scissor struct instead describes the region of the framebuffer to which pixels can be written
+                VkViewport viewport {};
+
+                viewport.x              = 0.0f;
+                viewport.y              = 0.0f;
+                viewport.width          = static_cast<float>( m_swapchainProps.extent.width );
+                viewport.height         = static_cast<float>( m_swapchainProps.extent.height );
+                viewport.minDepth       = 0.0f;
+                viewport.maxDepth       = 1.0f;
+                
+                VkRect2D scissor {};
+
+                scissor.offset          = { 0, 0 };
+                scissor.extent          = m_swapchainProps.extent;
+                
+                VkPipelineViewportStateCreateInfo viewportInfo {};
+
+                viewportInfo.sType              = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+                viewportInfo.viewportCount      = 1;
+                viewportInfo.pViewports         = &viewport;
+                viewportInfo.scissorCount       = 1;
+                viewportInfo.pScissors          = &scissor;
+
+                // ====================[ Rasterizer stage (fixed function stage) ]====================
+                // This stage describes:
+                //      - how the primitive shapes produced by the GPU shall be rasterized (transformed into fragments)
+                //      - how depth test shall be performed on the produced fragments
+                //      - if, and how, face culling shall be performed
+                //      - how scissor test shall be performed
+                
+                VkPipelineRasterizationStateCreateInfo rasterizerInfo {};
+
+                rasterizerInfo.sType                            = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+                rasterizerInfo.depthClampEnable                 = VK_FALSE;
+                rasterizerInfo.rasterizerDiscardEnable          = VK_FALSE;
+                rasterizerInfo.polygonMode                      = VK_POLYGON_MODE_FILL;
+                rasterizerInfo.cullMode                         = VK_CULL_MODE_BACK_BIT;
+                rasterizerInfo.frontFace                        = VK_FRONT_FACE_CLOCKWISE;
+                rasterizerInfo.depthBiasEnable                  = VK_FALSE;
+                rasterizerInfo.lineWidth                        = 1.0f;
+
+                // ====================[ Multisampling state description (fixed function stage) ]====================
+                // This struct describes if multisampling is enabled and how it shall be performed
+                VkPipelineMultisampleStateCreateInfo multisamplingInfo {};
+
+                multisamplingInfo.sType                         = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+                multisamplingInfo.sampleShadingEnable           = VK_FALSE;
+                multisamplingInfo.rasterizationSamples          = VK_SAMPLE_COUNT_1_BIT;
+                multisamplingInfo.minSampleShading              = 1.0f;
+                multisamplingInfo.pSampleMask                   = nullptr;
+                multisamplingInfo.alphaToCoverageEnable         = VK_FALSE;
+                multisamplingInfo.alphaToOneEnable              = VK_FALSE;
+
+                // ====================[ Depth/stencil test description (fixed function stage) ]====================
+                // This struct describes if depth/stencil test is enabled and how it shall be performed
+                VkPipelineDepthStencilStateCreateInfo depthStencilTestInfo {};
+                
+                depthStencilTestInfo.sType                      = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+                depthStencilTestInfo.depthTestEnable            = VK_TRUE;
+                depthStencilTestInfo.depthWriteEnable           = VK_TRUE;
+                depthStencilTestInfo.depthCompareOp             = VK_COMPARE_OP_LESS_OR_EQUAL;
+                
+                // ====================[ Color blending stage description (fixed function stage) ]====================
+                // This stage describes how color blending (blend between the color returned from the fragment shader and the color 
+                // stored in the framebuffer for a specific pixel) shall be performed
+                
+                // This struct describes how color blending should be performed on a specific framebuffer attachment (you may have multiple framebuffers)
+                VkPipelineColorBlendAttachmentState colorBlendAttachment {};
+
+                colorBlendAttachment.colorWriteMask             = VK_COLOR_COMPONENT_R_BIT || VK_COLOR_COMPONENT_G_BIT || VK_COLOR_COMPONENT_B_BIT || VK_COLOR_COMPONENT_A_BIT;
+                colorBlendAttachment.blendEnable                = VK_FALSE;
+                colorBlendAttachment.srcColorBlendFactor        = VK_BLEND_FACTOR_ONE;
+                colorBlendAttachment.dstColorBlendFactor        = VK_BLEND_FACTOR_ZERO;
+                colorBlendAttachment.colorBlendOp               = VK_BLEND_OP_ADD;
+                colorBlendAttachment.srcAlphaBlendFactor        = VK_BLEND_FACTOR_ONE;
+                colorBlendAttachment.dstAlphaBlendFactor        = VK_BLEND_FACTOR_ZERO;
+                colorBlendAttachment.alphaBlendOp               = VK_BLEND_OP_ADD;
+
+                // This struct describes all framebuffers on which the GPU shall execute color blendingn and how (for each of them)
+                VkPipelineColorBlendStateCreateInfo colorBlendingInfo {};
+
+                colorBlendingInfo.sType                         = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+                colorBlendingInfo.logicOpEnable                 = VK_FALSE;
+                colorBlendingInfo.logicOp                       = VK_LOGIC_OP_COPY;
+                colorBlendingInfo.attachmentCount               = 1;
+                colorBlendingInfo.pAttachments                  = &colorBlendAttachment;
+                
+                // ====================[ Dynamic state description ]====================
+                // This struct describes the portions of the pipeline state that can be changed dynamically (without recreating the entire pipeline, before a draw call is issued).
+                // This is a Vulkan specific thing, it does not map to a specific graphics pipeline stage (conceptually)
+                VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH };
+
+                VkPipelineDynamicStateCreateInfo dynamicStateInfo {};
+
+                dynamicStateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+                dynamicStateInfo.dynamicStateCount      = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
+                dynamicStateInfo.pDynamicStates         = dynamicStates;
+
+                // ====================[ Pipeline layout definition ]====================
+                // The VkPipelineLayout object describes the resources that will be accessed by the programmable stages of a graphics pipeline.
+                // Such resources are described using "descriptor set layout" structs
+                VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
+
+                pipelineLayoutInfo.sType                        = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+                pipelineLayoutInfo.setLayoutCount               = 0;
+                pipelineLayoutInfo.pSetLayouts                  = nullptr;
+                pipelineLayoutInfo.pushConstantRangeCount       = 0;
+                pipelineLayoutInfo.pPushConstantRanges          = nullptr;
+
+                if( vkCreatePipelineLayout(m_context.getLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: cannot create pipeline layout, vkCreatePipelineLayout() failed!");
+                        return false;
+                }
+
+                // TODO: Continue implementation...
+
                 return true;
         }
 
 
         void Renderer::destroyGraphicsPipeline()
         {
-                // TODO: Add implementation...
+                if(m_pipelineLayout != VK_NULL_HANDLE)
+                {
+                        vkDestroyPipelineLayout(m_context.getLogicalDevice(), m_pipelineLayout, nullptr);
+                        m_pipelineLayout = VK_NULL_HANDLE;
+                }
+
+                // TODO: Continue implementation...
         }
 
 }

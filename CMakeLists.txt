@@ -15,6 +15,8 @@ set(SRCS
 
         src/graphics/vulkanContext.hpp
         src/graphics/vulkanContext.cpp
+        src/graphics/vulkanShader.hpp
+        src/graphics/vulkanShader.cpp
         src/graphics/renderer.hpp
         src/graphics/renderer.cpp
 )
