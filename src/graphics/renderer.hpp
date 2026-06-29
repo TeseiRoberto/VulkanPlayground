@@ -69,6 +69,9 @@ namespace vp {
                 bool            createDepthAttachment();
                 void            destroyDepthAttachment();
 
+                bool            createRenderPass();
+                void            destroyRenderPass();
+
                 bool            createGraphicsPipeline();
                 void            destroyGraphicsPipeline();
 
@@ -88,10 +91,13 @@ namespace vp {
                 VkSwapchainKHR          m_swapchain = VK_NULL_HANDLE;                   ///< Swapchain that owns images on which renderer will draw
                 std::vector<VkImage>    m_swapchainImages;                              ///< Handles to images owned by the swapchain that the renderer is using
 
+                VkFormat                m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;  ///< Image format used for the depth image attachment
                 Image                   m_depthAttachment;                              ///< Image used to implement depth test
                 VkImageView             m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
         
+                VkRenderPass            m_renderPass = VK_NULL_HANDLE;                  ///< The main render pass used by the renderer
                 VkPipelineLayout        m_pipelineLayout = VK_NULL_HANDLE;              ///< Describes the resources used by the renderer's graphics pipeline
+                VkPipeline              m_pipeline = VK_NULL_HANDLE;                    ///< Handle to the graphics pipeline used by the renderer to draw graphics
         };
 
 }

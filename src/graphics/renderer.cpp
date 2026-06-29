@@ -213,7 +213,7 @@ namespace vp {
                         VK_FORMAT_D24_UNORM_S8_UINT
                 };
 
-                VkFormat format = VK_FORMAT_UNDEFINED;
+                m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;
 
                 // Search a format that supports depth and stencil test too
                 for(VkFormat fmt : candidates)
@@ -225,12 +225,12 @@ namespace vp {
 
                         if(fmtProps.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
                         {
-                                format = fmt;
+                                m_depthAttachmentFormat = fmt;
                                 break;
                         }
                 }
 
-                if(format == VK_FORMAT_UNDEFINED)
+                if(m_depthAttachmentFormat == VK_FORMAT_UNDEFINED)
                 {
                         LOG_ERROR("renderer::init() failed: createDepthAttachment() failed, cannot find a valid format to create the depth attachment!");
                         return false;
@@ -238,7 +238,7 @@ namespace vp {
 
                 // Create image for the depth attachment
                 if( !createImage(m_depthAttachment, m_swapchainProps.extent.width, m_swapchainProps.extent.height,
-                                        VK_IMAGE_TYPE_2D, 1, format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) )
+                                        VK_IMAGE_TYPE_2D, 1, m_depthAttachmentFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) )
                 {
                         LOG_ERROR("renderer::init() failed: createDepthAttachment() failed, creation of depth attachment image failed!");
                         return false;
@@ -249,7 +249,7 @@ namespace vp {
                 imageViewInfo.sType     = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
                 imageViewInfo.image     = m_depthAttachment.handle;
                 imageViewInfo.viewType  = VK_IMAGE_VIEW_TYPE_2D;
-                imageViewInfo.format    = format;
+                imageViewInfo.format    = m_depthAttachmentFormat;
 
                 imageViewInfo.subresourceRange.aspectMask       = VK_IMAGE_ASPECT_DEPTH_BIT;
                 imageViewInfo.subresourceRange.levelCount       = 1;
@@ -279,6 +279,7 @@ namespace vp {
                 }
 
                 destroyImage(m_depthAttachment);
+                m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;
         }
 
 
@@ -397,6 +398,98 @@ namespace vp {
 
 
         /**
+         * @brief Renderer::RenderPass
+         * Creates the main render pass used by the renderer
+         * @return True on success, false otherwise
+         * @note VkRenderPass is a vulkan object that describes the attachments to be used during rendering
+         *      operations and how those gets used.
+         *
+         *      A render pass is splitted into sub-passes.
+         *      Subpasses are subsequent rendering operations that depends on the content of the framebuffer computed by a
+         *      previous subpass (you can see a subpass as a single step during the rendering operation).
+         *
+         *      The render pass object desribes dependencies between the different subpasses too.
+         *
+         * Render passes have been deprecated since Vulkan 1.4, but I decided to use them anyway to 
+         * understand the concepts and because I don't want to force the usage of a specific Vulkan version
+        */
+        bool Renderer::createRenderPass()
+        {
+                // Describe the attachments to be used during the render pass
+                VkAttachmentDescription attachmentDescriptions[2] = {};
+
+                // Color attachment description
+                attachmentDescriptions[0].format                = m_swapchainProps.imageFormat;
+                attachmentDescriptions[0].samples               = VK_SAMPLE_COUNT_1_BIT;
+                attachmentDescriptions[0].loadOp                = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachmentDescriptions[0].storeOp               = VK_ATTACHMENT_STORE_OP_STORE;
+                attachmentDescriptions[0].stencilLoadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachmentDescriptions[0].stencilStoreOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                attachmentDescriptions[0].initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
+                attachmentDescriptions[0].finalLayout           = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+                // Depth attachment description
+                attachmentDescriptions[1].format                = m_depthAttachmentFormat;
+                attachmentDescriptions[1].samples               = VK_SAMPLE_COUNT_1_BIT;
+                attachmentDescriptions[1].loadOp                = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachmentDescriptions[1].storeOp               = VK_ATTACHMENT_STORE_OP_STORE;
+                attachmentDescriptions[1].stencilLoadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                attachmentDescriptions[1].stencilStoreOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                attachmentDescriptions[1].initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
+                attachmentDescriptions[1].finalLayout           = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+                // Reference to the color attachment
+                VkAttachmentReference colorAttachmentRef {};
+                colorAttachmentRef.attachment   = 0;
+                colorAttachmentRef.layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+                // Reference to the depth attachment
+                VkAttachmentReference depthAttachmentRef {};
+                depthAttachmentRef.attachment   = 1;
+                depthAttachmentRef.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+                // Create structs to describe the subpasses, we use only 1 subpass
+                VkSubpassDescription subpassDescription {};
+
+                subpassDescription.pipelineBindPoint            = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                subpassDescription.colorAttachmentCount         = 1;
+                subpassDescription.pColorAttachments            = &colorAttachmentRef;
+                subpassDescription.pDepthStencilAttachment      = &depthAttachmentRef;
+
+                // Create the main render pass object
+                VkRenderPassCreateInfo renderPassInfo {};
+
+                renderPassInfo.sType            = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+                renderPassInfo.attachmentCount  = 2;
+                renderPassInfo.pAttachments     = attachmentDescriptions;
+                renderPassInfo.subpassCount     = 1;
+                renderPassInfo.pSubpasses       = &subpassDescription;
+
+                if( vkCreateRenderPass(m_context.getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::init() failed: failed to create main render pass, vkCreateRenderPass() failed!");
+                        return false;
+                }
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyRenderPass
+         * Destroys the main render pass used by the renderer
+        */
+        void Renderer::destroyRenderPass()
+        {
+                if(m_renderPass == VK_NULL_HANDLE)
+                        return;
+
+                vkDestroyRenderPass(m_context.getLogicalDevice(), m_renderPass, nullptr);
+                m_renderPass = VK_NULL_HANDLE;
+        }
+
+
+        /**
          * @brief Renderer::createGraphicsPipeline
          * Creates the graphics pipeline to be used by the renderer.
          * @return True on success, false on failure
@@ -406,7 +499,7 @@ namespace vp {
         */
         bool Renderer::createGraphicsPipeline()
         {
-                // TODO: Implement a public API to manage the graphics pipeline stages configuration and shaders
+                // TODO: Implement a public API to manage the configuration of graphics pipeline stages and shaders
 
                 VulkanShader vertShader(&m_context);
                 VulkanShader fragShader(&m_context);
@@ -569,6 +662,7 @@ namespace vp {
                 }
 
                 // TODO: Continue implementation...
+                // Need to build the pipeline object, finally...
 
                 return true;
         }
