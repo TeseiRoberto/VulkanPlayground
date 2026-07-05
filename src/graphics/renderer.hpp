@@ -75,6 +75,9 @@ namespace vp {
                 bool            createGraphicsPipeline();
                 void            destroyGraphicsPipeline();
 
+                bool            createFramebuffers();
+                void            destroyFramebuffers();
+
                 bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
@@ -83,21 +86,24 @@ namespace vp {
                 uint32_t        findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props);
 
 
-                VulkanContext           m_context;                                      ///< Vulkan context instance used by the renderer
+                VulkanContext                   m_context;                                      ///< Vulkan context instance used by the renderer
 
-                VkSurfaceKHR            m_surface = VK_NULL_HANDLE;                     ///< Surface on which images produced by the renderer will be presented
+                VkSurfaceKHR                    m_surface = VK_NULL_HANDLE;                     ///< Surface on which images produced by the renderer will be presented
                 
-                SwapchainProps          m_swapchainProps;                               ///< Properties of the swapchain used by the renderer
-                VkSwapchainKHR          m_swapchain = VK_NULL_HANDLE;                   ///< Swapchain that owns images on which renderer will draw
-                std::vector<VkImage>    m_swapchainImages;                              ///< Handles to images owned by the swapchain that the renderer is using
+                SwapchainProps                  m_swapchainProps;                               ///< Properties of the swapchain used by the renderer
+                VkSwapchainKHR                  m_swapchain = VK_NULL_HANDLE;                   ///< Swapchain that owns images on which renderer will draw
+                std::vector<VkImage>            m_swapchainImages;                              ///< Handles to images owned by the swapchain that the renderer is using
+                std::vector<VkImageView>        m_swapchainImagesViews;                         ///< Handles to views of images owned by the swapchain 
 
-                VkFormat                m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;  ///< Image format used for the depth image attachment
-                Image                   m_depthAttachment;                              ///< Image used to implement depth test
-                VkImageView             m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
+                VkFormat                        m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;  ///< Image format used for the depth image attachment
+                Image                           m_depthAttachment;                              ///< Image used to implement depth test
+                VkImageView                     m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
         
-                VkRenderPass            m_renderPass = VK_NULL_HANDLE;                  ///< The main render pass used by the renderer
-                VkPipelineLayout        m_pipelineLayout = VK_NULL_HANDLE;              ///< Describes the resources used by the renderer's graphics pipeline
-                VkPipeline              m_pipeline = VK_NULL_HANDLE;                    ///< Handle to the graphics pipeline used by the renderer to draw graphics
+                VkRenderPass                    m_renderPass = VK_NULL_HANDLE;                  ///< The main render pass used by the renderer
+                VkPipelineLayout                m_pipelineLayout = VK_NULL_HANDLE;              ///< Describes the resources used by the renderer's graphics pipeline
+                VkPipeline                      m_pipeline = VK_NULL_HANDLE;                    ///< Handle to the graphics pipeline used by the renderer to draw graphics
+        
+                std::vector<VkFramebuffer>      m_swapchainFramebuffers;                        ///< Framebuffer objects used to bind swapchain images before rendering operations
         };
 
 }

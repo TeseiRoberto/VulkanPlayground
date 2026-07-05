@@ -39,6 +39,7 @@ namespace vp {
                 CHECK( createDepthAttachment() )
                 CHECK( createRenderPass() )
                 CHECK( createGraphicsPipeline() )
+                CHECK( createFramebuffers() )
 
                 // TODO: Add other stuff...
         
@@ -54,6 +55,7 @@ namespace vp {
         {
                 // TODO: Add other stuff...
 
+                destroyFramebuffers();
                 destroyGraphicsPipeline();
                 destroyRenderPass();
                 destroyDepthAttachment();
@@ -108,12 +110,13 @@ namespace vp {
 
         /**
          * @brief Renderer::createSwapchain
-         * Creates the swapchain used by the renderer and acquires handles to its images
+         * Creates the swapchain used by the renderer, acquires handles to its images
+         * anc creates an image view for each of them
          * @param wnd Window for which the swapchain shall be created
          * @return True on success, false on failure
          * @note The swapchain is simply an array of images, the renderer picks one of those images
          * and draws on it, then sends it to the surface to be displayed; after that the renderer
-         * repeats the process but on another image of the array
+         * repeats the process but on another image of the array.
         */
         bool Renderer::createSwapchain(GLFWwindow* wnd)
         {
@@ -181,6 +184,41 @@ namespace vp {
                         return false;
                 }
 
+                // Create image views for the images of the swapchain
+                m_swapchainImagesViews.reserve( m_swapchainImages.size() );
+
+                for(size_t i = 0; i < m_swapchainImages.size(); ++i)
+                {
+                        VkImageSubresourceRange subresourceView {};
+
+                        subresourceView.aspectMask      = VK_IMAGE_ASPECT_COLOR_BIT;
+                        subresourceView.baseMipLevel    = 0;
+                        subresourceView.levelCount      = 1;
+                        subresourceView.baseArrayLayer  = 0;
+                        subresourceView.layerCount      = 1;
+
+                        VkImageViewCreateInfo viewInfo {};
+
+                        viewInfo.sType                  = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                        viewInfo.image                  = m_swapchainImages[i];
+                        viewInfo.viewType               = VK_IMAGE_VIEW_TYPE_2D;
+                        viewInfo.format                 = m_swapchainProps.imageFormat;
+                        viewInfo.components.r           = VK_COMPONENT_SWIZZLE_IDENTITY;
+                        viewInfo.components.g           = VK_COMPONENT_SWIZZLE_IDENTITY;
+                        viewInfo.components.b           = VK_COMPONENT_SWIZZLE_IDENTITY;
+                        viewInfo.components.a           = VK_COMPONENT_SWIZZLE_IDENTITY;
+                        viewInfo.subresourceRange       = subresourceView;
+
+                        VkImageView currImageView = VK_NULL_HANDLE;
+                        if( vkCreateImageView(m_context.getLogicalDevice(), &viewInfo, nullptr, &currImageView) != VK_SUCCESS )
+                        {
+                                LOG_ERROR("Renderer::init() failed: cannot create view for swapchain image, vkCreateImageView() failed!");
+                                false;
+                        }
+
+                        m_swapchainImagesViews.push_back(currImageView);
+                }
+
                 return true;
         }
 
@@ -193,6 +231,12 @@ namespace vp {
         {
                 if(m_swapchain == VK_NULL_HANDLE)
                         return;
+
+                // Destroy views for the swapchain images
+                for(VkImageView& view : m_swapchainImagesViews)
+                        vkDestroyImageView(m_context.getLogicalDevice(), view, nullptr);
+
+                m_swapchainImagesViews.clear();
 
                 m_swapchainProps = {};
                 m_swapchainImages.clear();
@@ -436,7 +480,7 @@ namespace vp {
                 attachmentDescriptions[1].format                = m_depthAttachmentFormat;
                 attachmentDescriptions[1].samples               = VK_SAMPLE_COUNT_1_BIT;
                 attachmentDescriptions[1].loadOp                = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                attachmentDescriptions[1].storeOp               = VK_ATTACHMENT_STORE_OP_STORE;
+                attachmentDescriptions[1].storeOp               = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 attachmentDescriptions[1].stencilLoadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 attachmentDescriptions[1].stencilStoreOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 attachmentDescriptions[1].initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -715,6 +759,68 @@ namespace vp {
                         m_pipelineLayout = VK_NULL_HANDLE;
                 }
         }
+
+
+        /**
+         * @brief Renderer::createFramebuffers
+         * Creates framebuffer objects used by the renderer to bind the swapchain
+         * images (as color attachments) before rendering.
+         * @return True on success, false on failure
+         *
+         * @note A VkFramebuffer object represents the collection of memory attachments
+         * (color buffer, depth buffer, ...) that a render pass instance will target during
+         * rendering operations.
+         * The VkFramebuffer itself does not own any image/GPU memory, it acts only as a 
+         * container to references to images/GPU memory.
+         * A given VkFramebuffer can be used with any render pass as long as it matches
+         * the attachments required by such rendere pass.
+        */
+        bool Renderer::createFramebuffers()
+        {
+                m_swapchainFramebuffers.resize(m_swapchainImagesViews.size());
+
+                for(size_t i = 0; i < m_swapchainImagesViews.size(); ++i)
+                {
+                        // Attachments to be bound by the current framebuffer
+                        VkImageView attachments[] = {
+                                m_swapchainImagesViews[i],
+                                m_depthAttachmentView
+                        };
+
+                        VkFramebufferCreateInfo framebufferInfo {};
+
+                        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                        framebufferInfo.renderPass      = m_renderPass;
+                        framebufferInfo.attachmentCount = 2;
+                        framebufferInfo.pAttachments    = attachments;
+                        framebufferInfo.width           = m_swapchainProps.extent.width;
+                        framebufferInfo.height          = m_swapchainProps.extent.height;
+                        framebufferInfo.layers          = 1;
+
+                        if( vkCreateFramebuffer(m_context.getLogicalDevice(), &framebufferInfo, nullptr, &(m_swapchainFramebuffers[i]) ) != VK_SUCCESS )
+                        {
+                                LOG_ERROR("renderer::init() failed: cannot create framebuffers, vkCreateFramebuffers() failed!");
+                                return false;
+                        }
+                }
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyFramebuffers()
+         * Destroys the framebuffers used by the renderer
+        */
+        void Renderer::destroyFramebuffers()
+        {
+                for(VkFramebuffer& framebuffer : m_swapchainFramebuffers)
+                        vkDestroyFramebuffer(m_context.getLogicalDevice(), framebuffer, nullptr);
+
+                m_swapchainFramebuffers.clear();
+        }
+
+
 
 }
 
