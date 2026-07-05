@@ -78,6 +78,11 @@ namespace vp {
                 bool            createFramebuffers();
                 void            destroyFramebuffers();
 
+                bool            createCommandPool();
+                void            destroyCommandPool();
+
+                bool            createCommandBuffer();
+
                 bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
@@ -98,12 +103,15 @@ namespace vp {
                 VkFormat                        m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;  ///< Image format used for the depth image attachment
                 Image                           m_depthAttachment;                              ///< Image used to implement depth test
                 VkImageView                     m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
-        
+
                 VkRenderPass                    m_renderPass = VK_NULL_HANDLE;                  ///< The main render pass used by the renderer
                 VkPipelineLayout                m_pipelineLayout = VK_NULL_HANDLE;              ///< Describes the resources used by the renderer's graphics pipeline
                 VkPipeline                      m_pipeline = VK_NULL_HANDLE;                    ///< Handle to the graphics pipeline used by the renderer to draw graphics
-        
+
                 std::vector<VkFramebuffer>      m_swapchainFramebuffers;                        ///< Framebuffer objects used to bind swapchain images before rendering operations
+
+                VkCommandPool                   m_gfxCommandPool = VK_NULL_HANDLE;              ///< Pool that manages commands that will be sent by the renderer to the graphics queue
+                VkCommandBuffer                 m_gfxCmdBuffer = VK_NULL_HANDLE;                ///< Cmmand buffer that will be sent by the renderer to the graphics queue
         };
 
 }

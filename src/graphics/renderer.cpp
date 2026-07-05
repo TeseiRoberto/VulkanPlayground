@@ -40,6 +40,9 @@ namespace vp {
                 CHECK( createRenderPass() )
                 CHECK( createGraphicsPipeline() )
                 CHECK( createFramebuffers() )
+                CHECK( createCommandPool() )
+                CHECK( createCommandBuffer() )
+
 
                 // TODO: Add other stuff...
         
@@ -55,6 +58,7 @@ namespace vp {
         {
                 // TODO: Add other stuff...
 
+                destroyCommandPool();
                 destroyFramebuffers();
                 destroyGraphicsPipeline();
                 destroyRenderPass();
@@ -821,6 +825,82 @@ namespace vp {
         }
 
 
+        /**
+         * @brief Renderer::createCommandPool
+         * Creates the command pool that manages command buffer that will be sent
+         * by the renderer to the graphics queue.
+         * @return True on success, false on failure
+         *
+         * @note A VkCommandPool is a vulkan object that is responsible for allocation and
+         * deallocation of command buffer objects.
+         * The command buffers allocated from a given pool can be sent only to the queue family
+         * for which the pool has been created (in other words: a command pool is specific to a
+         * certain queue family index that is specified at creation time of the pool).
+        */
+        bool Renderer::createCommandPool()
+        {
+                VkCommandPoolCreateInfo poolInfo {};
+
+                poolInfo.sType                  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+                poolInfo.flags                  = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+                poolInfo.queueFamilyIndex       = m_context.getQueueFamilyIndices().graphicQueueIndex;
+
+                if( vkCreateCommandPool(m_context.getLogicalDevice(), &poolInfo, nullptr, &m_gfxCommandPool) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: cannot create graphics command pool, vkCreateCommandPool() failed!");
+                        return false;
+                }
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyCommandPool
+         * Destroys the command pool for the graphics queue
+        */
+        void Renderer::destroyCommandPool()
+        {
+                if(m_gfxCommandPool == VK_NULL_HANDLE)
+                        return;
+
+                vkDestroyCommandPool(m_context.getLogicalDevice(), m_gfxCommandPool, nullptr);
+                m_gfxCommandPool = VK_NULL_HANDLE;
+                m_gfxCmdBuffer = VK_NULL_HANDLE;
+        }
+
+
+        /**
+         * @brief Renderer::createCommandBuffer
+         * Creates a command buffer that can be sent to the graphics queue of the GPU.
+         * @return True on success, false on failure
+         *
+         * @note A VkCommandBuffer is a vulkan object in which commands that shall be executed
+         * by the GPU are recorded (you can imagine them as containers for GPU commands).
+         * Once recorded such commands can be sent to a queue of the GPU to be executed.
+         * Command buffers are used to specify all types of operations that the GPU must execute
+         * (i.e. draw operations, data transfer operations, ...).
+         * 
+         * A VkCommandBuffer is automatically freed when the pool from which it has been created
+         * gets destroyed
+        */
+        bool Renderer::createCommandBuffer()
+        {
+                VkCommandBufferAllocateInfo cmdAllocInfo {};
+
+                cmdAllocInfo.sType                      = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                cmdAllocInfo.commandPool                = m_gfxCommandPool;
+                cmdAllocInfo.level                      = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                cmdAllocInfo.commandBufferCount         = 1;
+
+                if( vkAllocateCommandBuffers(m_context.getLogicalDevice(), &cmdAllocInfo, &m_gfxCmdBuffer) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: cannot create graphics command buffer, vkAllocateCommandBuffers() failed!");
+                        return false;
+                }
+
+                return true;
+        }
 
 }
 
