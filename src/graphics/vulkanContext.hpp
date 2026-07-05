@@ -26,21 +26,6 @@ namespace vp {
         */
         class VulkanContext {
         public:
-                explicit                        VulkanContext() = default;
-                                                ~VulkanContext();
-
-                bool                            init(bool useValidationLayers = false);
-                void                            terminate();
-
-                inline bool                     isInit() const          { return m_instance != VK_NULL_HANDLE; }
-
-                inline VkInstance               getInstance()           { return m_instance; }
-                inline VkPhysicalDevice         getPhysicalDevice()     { return m_physDevice; }
-                inline VkDevice                 getLogicalDevice()      { return m_logicDevice; }
-                inline VkQueue                  getGraphicsQueue()      { return m_gfxQueue; }
-
-        private:
-
 
                 /**
                  * @struct QueueFamilyIndices
@@ -51,6 +36,22 @@ namespace vp {
                 };
 
 
+
+                explicit                                VulkanContext() = default;
+                                                        ~VulkanContext();
+
+                bool                                    init(bool useValidationLayers = false);
+                void                                    terminate();
+
+                inline bool                             isInit() const                  { return m_instance != VK_NULL_HANDLE; }
+
+                inline VkInstance                       getInstance()                   { return m_instance; }
+                inline VkPhysicalDevice                 getPhysicalDevice()             { return m_physDevice; }
+                inline VkDevice                         getLogicalDevice()              { return m_logicDevice; }
+                inline VkQueue                          getGraphicsQueue()              { return m_gfxQueue; }
+                inline const QueueFamilyIndices         getQueueFamilyIndices()         { return m_queueFamilyIndices; }
+
+        private:
                 bool            createInstance(bool useValidationLayers);
                 void            destroyInstance();
 
