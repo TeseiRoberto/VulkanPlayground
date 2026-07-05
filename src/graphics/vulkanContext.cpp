@@ -10,6 +10,15 @@ namespace vp {
 
 
         /**
+         * @brief VulkanContext::REQUIRED_VALIDATION_LAYERS
+         * Validation layers required by the renderer
+         */
+        const std::vector<const char*> VulkanContext::REQUIRED_VALIDATION_LAYERS = {
+                "VK_LAYER_KHRONOS_validation"
+        };
+
+
+        /**
          * @brief ~VulkanContext::VulkanContext
          * Terminates the vulkan context if not done yet
         */
@@ -23,14 +32,21 @@ namespace vp {
         /**
          * @brief VulkanContext::init
          * Initializes the vulkan context by creating all the basics Vk* objects necessary
+         * @param useValidationLayers Indicates if validation layers shall be enabled or not
          * @return true on success, false on failure
          * @note GLFW must be initialized before this method is called!
         */
-        bool VulkanContext::init()
+        bool VulkanContext::init(bool useValidationLayers)
         {
+                if(isInit())
+                {
+                        LOG_WARN("VulkanContext::init() called but context is already initialized!");
+                        return false;
+                }
+
                 #define CHECK(x) if( !x ) { terminate(); return false; }
 
-                if( !createInstance() )
+                if( !createInstance(useValidationLayers) )
                         return false;
 
                 CHECK( pickPhysicalDevice() )
@@ -56,11 +72,15 @@ namespace vp {
         /**
          * @brief VulkanContext::createInstance
          * Initializes the vulkan instance associated to the context.
-         * The instance is the connection between the application and the Vulkan API (driver)
+         * @param useValidationLayers Indicates if validation layers shall be enabled or not
          * @return True on success, false on failure
+         * @note The VkInstance object represents the connection between the application and the Vulkan API (driver)
         */
-        bool VulkanContext::createInstance()
+        bool VulkanContext::createInstance(bool useValidationLayers)
         {
+                if( useValidationLayers && !checkValidationLayersSupport() )
+                        return false;
+
                 VkApplicationInfo appInfo = {};
                 appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
                 appInfo.pApplicationName = "vulkanPlayground";
@@ -81,6 +101,13 @@ namespace vp {
                 instanceInfo.pApplicationInfo = &appInfo;
                 instanceInfo.enabledExtensionCount = extensionCount;
                 instanceInfo.ppEnabledExtensionNames = extensions;
+
+                // Enable validation layers, if necessary
+                if(useValidationLayers)
+                {
+                        instanceInfo.enabledLayerCount = static_cast<uint32_t>( REQUIRED_VALIDATION_LAYERS.size() );
+                        instanceInfo.ppEnabledLayerNames = REQUIRED_VALIDATION_LAYERS.data();
+                }
 
                 if( vkCreateInstance(&instanceInfo, nullptr, &m_instance) != VK_SUCCESS )
                 {
@@ -295,6 +322,45 @@ namespace vp {
                 vkDestroyDevice(m_logicDevice, nullptr);
                 m_logicDevice = VK_NULL_HANDLE;
                 m_gfxQueue = VK_NULL_HANDLE;
+        }
+
+
+        /**
+         * @brief VulkanContext::checkValidationLayersSupport
+         * Checks if validation layers are supported
+         * @return True if all necessary validation layers are supported, false otherwise
+        */
+        bool VulkanContext::checkValidationLayersSupport()
+        {
+                // Get number and properties of available validation layers
+                uint32_t layerCount = 0;
+                vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+                std::vector<VkLayerProperties> availableLayers(layerCount);
+                vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+                // Check that all the required layers are available
+                for(const char* requiredLayer : REQUIRED_VALIDATION_LAYERS)
+                {
+                        bool found = false;
+
+                        for(VkLayerProperties& layerProps : availableLayers)
+                        {
+                                if(strcmp(requiredLayer, layerProps.layerName) == 0)
+                                {
+                                        found = true;
+                                        break;
+                                }
+                        }
+
+                        if( !found )
+                        {
+                                LOG_ERROR("VulkanContext::init() failed: validation layer \"%s\" is required but not available!", requiredLayer);
+                                return false;
+                        }
+                }
+
+                return true;
         }
 
 }

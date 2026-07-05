@@ -31,12 +31,13 @@ namespace vp {
         {
                 #define CHECK(x) if( !x ) { terminate(); return false; }
 
-                if( !m_context.init() )
+                if( !m_context.init(true) )
                         return false;
 
                 CHECK( createSurface(wnd) )
                 CHECK( createSwapchain(wnd) )
                 CHECK( createDepthAttachment() )
+                CHECK( createRenderPass() )
                 CHECK( createGraphicsPipeline() )
 
                 // TODO: Add other stuff...
@@ -54,6 +55,7 @@ namespace vp {
                 // TODO: Add other stuff...
 
                 destroyGraphicsPipeline();
+                destroyRenderPass();
                 destroyDepthAttachment();
                 destroySwapchain();
                 destroySurface();
@@ -237,7 +239,7 @@ namespace vp {
                 }
 
                 // Create image for the depth attachment
-                if( !createImage(m_depthAttachment, m_swapchainProps.extent.width, m_swapchainProps.extent.height,
+                if( !createImage(m_depthAttachment, m_swapchainProps.extent.width, m_swapchainProps.extent.height, 1,
                                         VK_IMAGE_TYPE_2D, 1, m_depthAttachmentFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) )
                 {
                         LOG_ERROR("renderer::init() failed: createDepthAttachment() failed, creation of depth attachment image failed!");
@@ -290,6 +292,7 @@ namespace vp {
          * @param image Output variable in which data for the created image will be stored
          * @param width Width of the image to be crated, expressed in pixels
          * @param height Height of the image to be crated, expressed in pixels
+         * @param depth Depth of the image to be crated (intended as num. of layers for the image)
          * @param type Type of image to be created
          * @param mipLevels number of mip-map levels 
          * @param format Format of the texels that will compose the image to be created
@@ -298,7 +301,7 @@ namespace vp {
          * @return True on success, false on failure
          *
         */
-        bool Renderer::createImage(Image& image, uint32_t width, uint32_t height, VkImageType type, uint32_t mipLevels,
+        bool Renderer::createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                         VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags)
         {
                 VkImageCreateInfo imageInfo {};
@@ -307,6 +310,7 @@ namespace vp {
                 imageInfo.format                = format;
                 imageInfo.extent.width          = width;
                 imageInfo.extent.height         = height;
+                imageInfo.extent.depth          = depth;
                 imageInfo.mipLevels             = mipLevels;
                 imageInfo.arrayLayers           = 1;
                 imageInfo.samples               = VK_SAMPLE_COUNT_1_BIT;
@@ -402,7 +406,7 @@ namespace vp {
          * Creates the main render pass used by the renderer
          * @return True on success, false otherwise
          * @note VkRenderPass is a vulkan object that describes the attachments to be used during rendering
-         *      operations and how those gets used.
+         *      operations and how those are used.
          *
          *      A render pass is splitted into sub-passes.
          *      Subpasses are subsequent rendering operations that depends on the content of the framebuffer computed by a
@@ -615,7 +619,7 @@ namespace vp {
                 // This struct describes how color blending should be performed on a specific framebuffer attachment (you may have multiple framebuffers)
                 VkPipelineColorBlendAttachmentState colorBlendAttachment {};
 
-                colorBlendAttachment.colorWriteMask             = VK_COLOR_COMPONENT_R_BIT || VK_COLOR_COMPONENT_G_BIT || VK_COLOR_COMPONENT_B_BIT || VK_COLOR_COMPONENT_A_BIT;
+                colorBlendAttachment.colorWriteMask             = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
                 colorBlendAttachment.blendEnable                = VK_FALSE;
                 colorBlendAttachment.srcColorBlendFactor        = VK_BLEND_FACTOR_ONE;
                 colorBlendAttachment.dstColorBlendFactor        = VK_BLEND_FACTOR_ZERO;
@@ -661,22 +665,55 @@ namespace vp {
                         return false;
                 }
 
-                // TODO: Continue implementation...
-                // Need to build the pipeline object, finally...
+                // ====================[ Pipeline creation ]====================
+                // Now that we have defined all the programmable and fixed stages of the pipeline and
+                // theire properties we can finally create the graphics pipeline
+                VkGraphicsPipelineCreateInfo pipelineInfo {};
+
+                pipelineInfo.sType                      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+                pipelineInfo.stageCount                 = 2;
+                pipelineInfo.pStages                    = shaderStagesInfo;
+                pipelineInfo.pVertexInputState          = &vertexInputInfo;
+                pipelineInfo.pInputAssemblyState        = &inputAssemblyInfo;
+                pipelineInfo.pViewportState             = &viewportInfo;
+                pipelineInfo.pRasterizationState        = &rasterizerInfo;
+                pipelineInfo.pMultisampleState          = &multisamplingInfo;
+                pipelineInfo.pDepthStencilState         = &depthStencilTestInfo; 
+                pipelineInfo.pColorBlendState           = &colorBlendingInfo;
+                pipelineInfo.pDynamicState              = &dynamicStateInfo;
+                pipelineInfo.layout                     = m_pipelineLayout;
+                pipelineInfo.renderPass                 = m_renderPass;
+                pipelineInfo.subpass                    = 0;
+                pipelineInfo.basePipelineHandle         = VK_NULL_HANDLE;
+                pipelineInfo.basePipelineIndex          = -1;
+                
+                if( vkCreateGraphicsPipelines(m_context.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: cannot create pipeline, vkCreateGraphicsPipeline() failed!");
+                        return false;
+                }
 
                 return true;
         }
 
 
+        /**
+         * @brief Renderer::destroyGraphicsPipeline
+         * Destroys the graphics pipeline used by the renderer
+        */
         void Renderer::destroyGraphicsPipeline()
         {
+                if(m_pipeline!= VK_NULL_HANDLE)
+                {
+                        vkDestroyPipeline(m_context.getLogicalDevice(), m_pipeline, nullptr);
+                        m_pipeline = VK_NULL_HANDLE;
+                }
+
                 if(m_pipelineLayout != VK_NULL_HANDLE)
                 {
                         vkDestroyPipelineLayout(m_context.getLogicalDevice(), m_pipelineLayout, nullptr);
                         m_pipelineLayout = VK_NULL_HANDLE;
                 }
-
-                // TODO: Continue implementation...
         }
 
 }

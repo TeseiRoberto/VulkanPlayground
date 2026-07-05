@@ -75,7 +75,7 @@ namespace vp {
                 bool            createGraphicsPipeline();
                 void            destroyGraphicsPipeline();
 
-                bool            createImage(Image& image, uint32_t width, uint32_t height, VkImageType type, uint32_t mipLevels,
+                bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
                 void            destroyImage(Image& image);
