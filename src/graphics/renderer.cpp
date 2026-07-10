@@ -42,7 +42,7 @@ namespace vp {
                 CHECK( createFramebuffers() )
                 CHECK( createCommandPool() )
                 CHECK( createCommandBuffer() )
-
+                CHECK( recordCommandBuffer(m_gfxCmdBuffer, 0) )    // TODO: This shall be done externally to the renderer....
 
                 // TODO: Add other stuff...
         
@@ -901,6 +901,94 @@ namespace vp {
 
                 return true;
         }
+
+
+        /**
+         * @brief Renderer::recordCommandBuffer
+         * Records some predefined commands into the command buffer managed by the renderer
+         * @param cmdBuffer Command buffer into which commands shall be recorded
+         * @param imageIndex Index of the swapchain image for which rendering commands shall be recorded
+         * @return True on success, false otherwise
+        */
+        bool Renderer::recordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
+        {
+                // TODO: Define an API so that the user can record rendering commands through the renderer
+
+                // Define clear values for color and depth attachments
+                VkClearValue clearValues[2] = {
+                        { { 0.0f, 0.0f, 0.0f, 1.0f } },         // Clear value for color attachment
+                        { { 1.0f, 0.0f } }                      // Clear value for depth and stencil attachments
+                };
+
+                // Define viewport (this is declared as dynamic state by the pipeline object)
+                VkViewport viewport;
+                viewport.x              = 0.0;
+                viewport.y              = 0.0;
+                viewport.width          = m_swapchainProps.extent.width;
+                viewport.height         = m_swapchainProps.extent.height;
+                viewport.minDepth       = 0.0;
+                viewport.maxDepth       = 1.0;
+
+                if(imageIndex >= m_swapchainFramebuffers.size())
+                {
+                        LOG_ERROR("renderer::recordCommandBuffer() failed: there is no swapchain framebuffer related to the given image index!");
+                        return false;
+                }
+
+                // Reset the command buffer
+                if( vkResetCommandBuffer(cmdBuffer, 0) != VK_SUCCESS)
+                {
+                        LOG_ERROR("renderer::recordCommandBuffer() failed: cannot reset command buffer, vkResetCommandBuffer() failed!");
+                        return false;
+                }
+
+                // Create a struct to describe some details about the usage of the command buffer
+                VkCommandBufferBeginInfo cmdBeginInfo {};
+
+                cmdBeginInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                cmdBeginInfo.flags              = 0;
+                cmdBeginInfo.pInheritanceInfo   = nullptr;
+
+                // Initialize recording of commands into the buffer
+                if( vkBeginCommandBuffer(cmdBuffer, &cmdBeginInfo) != VK_SUCCESS)
+                {
+                        LOG_ERROR("renderer::recordCommandBuffer() failed: cannot begin command recording, vkBeginCommandBuffer() failed!");
+                        return false;
+                }
+
+                // We are using a render pass, so we need to record a command to begin the render pass
+                VkRenderPassBeginInfo renderPassInfo {};
+
+                renderPassInfo.sType                    = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+                renderPassInfo.renderPass               = m_renderPass;
+                renderPassInfo.framebuffer              = m_swapchainFramebuffers[imageIndex];
+                renderPassInfo.renderArea.offset        = { 0, 0 };
+                renderPassInfo.renderArea.extent        = m_swapchainProps.extent;
+                renderPassInfo.clearValueCount          = 2;
+                renderPassInfo.pClearValues             = clearValues;
+
+                // Let's record commands into the buffer
+                vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+                vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+
+                vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+
+                vkCmdDraw(cmdBuffer, 3, 1, 0, 0);       // Params are: vertex count, instance count, first vertex, first instance
+
+                vkCmdEndRenderPass(cmdBuffer);
+
+                // Finish recording of commands into the buffer
+                if( vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::recordCommandBuffer() failed: cannot end command recording, vkEndCommandBuffer() failed!");
+                        return false;
+                }
+
+                return true;
+        }
+
+
 
 }
 
