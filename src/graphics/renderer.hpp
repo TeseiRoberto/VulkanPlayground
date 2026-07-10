@@ -82,6 +82,7 @@ namespace vp {
                 void            destroyCommandPool();
 
                 bool            createCommandBuffer();
+                bool            recordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
 
                 bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
