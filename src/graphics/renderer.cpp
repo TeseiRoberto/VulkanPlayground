@@ -152,7 +152,7 @@ namespace vp {
                 }
 
                 m_swapchainProps.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
-                const VkColorSpaceKHR imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+                m_swapchainProps.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 
                 VkSwapchainCreateInfoKHR swapchainInfo {};
                 swapchainInfo.sType             = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
