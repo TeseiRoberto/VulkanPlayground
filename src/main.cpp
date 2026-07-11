@@ -40,6 +40,7 @@ int main()
 
         while( !glfwWindowShouldClose(wnd) )
         {
+                renderer.drawFrame();
                 glfwPollEvents();
         }
 
