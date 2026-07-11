@@ -121,7 +121,7 @@ namespace vp {
         
                 VkSemaphore                     m_imageAvailableSemaphore = VK_NULL_HANDLE;     ///< Semaphore used to signal that an image has been acquired from the swapchain (we are ready to render on it)
                 VkSemaphore                     m_renderingFinishedSemaphore = VK_NULL_HANDLE;  ///< Semaphore used to signal that rendering is done and the image can be presented
-                VkFence                         m_presentationFinishedFence = VK_NULL_HANDLE;   ///< Fence used to signal that the rendered image has been presented
+                VkFence                         m_renderingFinishedFence = VK_NULL_HANDLE;      ///< Fence used to signal that rendering is done, command buffer can be reused and the image can be presented
         };
 
 }
