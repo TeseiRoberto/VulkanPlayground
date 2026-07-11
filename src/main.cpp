@@ -41,6 +41,8 @@ int main()
         while( !glfwWindowShouldClose(wnd) )
         {
                 renderer.drawFrame();
+
+                glfwSwapBuffers(wnd);
                 glfwPollEvents();
         }
 

@@ -42,7 +42,6 @@ namespace vp {
                 CHECK( createFramebuffers() )
                 CHECK( createCommandPool() )
                 CHECK( createCommandBuffer() )
-                CHECK( recordCommandBuffer(m_gfxCmdBuffer, 0) )    // TODO: This shall be done externally to the renderer....
                 CHECK( createSynchObjects() )
 
                 // TODO: Add other stuff...
@@ -59,6 +58,13 @@ namespace vp {
         {
                 // TODO: Add other stuff...
 
+                // If renderer has been initialized correctly
+                if(isInit())
+                {
+                        // Wait for device to finish all operations
+                        vkDeviceWaitIdle(m_context.getLogicalDevice());
+                }
+
                 destroySynchObjects();
                 destroyCommandPool();
                 destroyFramebuffers();
@@ -72,6 +78,75 @@ namespace vp {
         }
 
 
+        /*!
+         * @brief Renderer::drawFrame
+         * Draws a single frame
+         *
+         * @note In vulkan to render a frame the following operations are necessary:
+         *      - wait for the previous frame to finish
+         *      - acquire an image from the swapchain
+         *      - record a command buffer to render the frame
+         *      - submit the recorded command buffer to the GPU
+         *      - wait for GPU to finish command buffer execution
+         *      - present the rendered image (by submitting it back to the swapchain)
+        */
+        void Renderer::drawFrame()
+        {
+                // Wait for the previous frame to finish and reset the fence
+                vkWaitForFences(m_context.getLogicalDevice(), 1, &m_renderingFinishedFence, VK_TRUE, UINT64_MAX);
+                
+                vkResetFences(m_context.getLogicalDevice(), 1, &m_renderingFinishedFence);
+
+                // Acquire swapchain image
+                uint32_t imageIndex = 0;
+                vkAcquireNextImageKHR(m_context.getLogicalDevice(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        
+                // Record command buffer
+                if( !recordCommandBuffer(m_gfxCmdBuffer, imageIndex) )
+                        return;
+
+                // Define semaphores to be waited before beginning command buffer execution and the pipeline stages that are "locked" by the them
+                VkSemaphore* semToWait = &m_imageAvailableSemaphore;
+                VkPipelineStageFlags stageToWait[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+                // Define semaphores that shall be signaled when command buffer execution is over
+                VkSemaphore* semToSignal = &m_renderingFinishedSemaphore;
+
+                // We now create a struct to describe how the command shall be submitted to the graphics queue
+                VkSubmitInfo submitInfo {};
+
+                submitInfo.sType                        = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submitInfo.waitSemaphoreCount           = 1;
+                submitInfo.pWaitSemaphores              = semToWait;
+                submitInfo.pWaitDstStageMask            = stageToWait;
+                submitInfo.commandBufferCount           = 1;
+                submitInfo.pCommandBuffers              = &m_gfxCmdBuffer;
+                submitInfo.signalSemaphoreCount         = 1;
+                submitInfo.pSignalSemaphores            = semToSignal;
+
+                // Submit command buffer to queue
+                if( vkQueueSubmit(m_context.getGraphicsQueue(), 1, &submitInfo, m_renderingFinishedFence) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::drawFrame() failed: failed to submit command buffer to queue, vkQueueSubmit() failed!");
+                        return;
+                }
+
+                // We can now present the image (send it back to the swapchain)
+                VkPresentInfoKHR presentInfo {};
+
+                presentInfo.sType                       = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+                presentInfo.waitSemaphoreCount          = 1;
+                presentInfo.pWaitSemaphores             = semToSignal;
+                presentInfo.swapchainCount              = 1;
+                presentInfo.pSwapchains                 = &m_swapchain;
+                presentInfo.pImageIndices               = &imageIndex;
+
+                if( vkQueuePresentKHR(m_context.getGraphicsQueue(), &presentInfo) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::drawFrame() failed: failed to present rendered image, vkQueuePresent() failed!");
+                        return;
+                }
+        }
 
 
         /**
@@ -510,6 +585,17 @@ namespace vp {
                 subpassDescription.pColorAttachments            = &colorAttachmentRef;
                 subpassDescription.pDepthStencilAttachment      = &depthAttachmentRef;
 
+                // Create struct to describe the dependencies of the subpass
+                // (we have only one dependency which is the image to which we are rendering to)
+                VkSubpassDependency dependency {};
+
+                dependency.srcSubpass           = VK_SUBPASS_EXTERNAL;
+                dependency.dstSubpass           = 0;
+                dependency.srcStageMask         = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                dependency.srcAccessMask        = 0;
+                dependency.dstStageMask         = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                dependency.dstAccessMask        = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
                 // Create the main render pass object
                 VkRenderPassCreateInfo renderPassInfo {};
 
@@ -518,6 +604,8 @@ namespace vp {
                 renderPassInfo.pAttachments     = attachmentDescriptions;
                 renderPassInfo.subpassCount     = 1;
                 renderPassInfo.pSubpasses       = &subpassDescription;
+                renderPassInfo.dependencyCount  = 1;
+                renderPassInfo.pDependencies    = &dependency;
 
                 if( vkCreateRenderPass(m_context.getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS )
                 {
@@ -992,16 +1080,6 @@ namespace vp {
 
 
         /*!
-         * @brief Renderer::drawFrame
-         *
-        */
-        void Renderer::drawFrame()
-        {
-                // TODO: Add implementation...
-        }
-
-
-        /*!
          * @brief Renderer::createSynchObjects
          * Creates the synchronization objects required by the renderer to synchronize
          * work between CPU and GPU (acquisition, rendering and presentation on swapchain images).
@@ -1038,6 +1116,7 @@ namespace vp {
 
                 VkFenceCreateInfo fenceInfo {};
                 fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+                fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
                 // Create "image available" semaphore
                 if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS )
@@ -1053,10 +1132,10 @@ namespace vp {
                         return false;
                 }
 
-                // Create "presentation finished" fence
-                if( vkCreateFence(m_context.getLogicalDevice(), &fenceInfo, nullptr, &m_presentationFinishedFence) != VK_SUCCESS )
+                // Create "rendering finished" fence
+                if( vkCreateFence(m_context.getLogicalDevice(), &fenceInfo, nullptr, &m_renderingFinishedFence) != VK_SUCCESS )
                 {
-                        LOG_ERROR("renderer::init() failed: failed to create \"image available\" semaphore, vkCreateSemaphore() failed!");
+                        LOG_ERROR("renderer::init() failed: failed to create \"rendering finished\" semaphore, vkCreateFence() failed!");
                         return false;
                 }
 
@@ -1065,7 +1144,7 @@ namespace vp {
 
 
         /*!
-         * @brief Renderer::createSynchObjects
+         * @brief Renderer::destroySynchObjects
          * Destroys the synchronization objects used by the renderer
         */
         void Renderer::destroySynchObjects()
@@ -1084,11 +1163,11 @@ namespace vp {
                         m_renderingFinishedSemaphore = VK_NULL_HANDLE;
                 }
 
-                // Destroy "presentation finished" fence
-                if(m_presentationFinishedFence != VK_NULL_HANDLE)
+                // Destroy "rendering finished" fence
+                if(m_renderingFinishedFence != VK_NULL_HANDLE)
                 {
-                        vkDestroyFence(m_context.getLogicalDevice(), m_presentationFinishedFence , nullptr);
-                        m_presentationFinishedFence != VK_NULL_HANDLE;
+                        vkDestroyFence(m_context.getLogicalDevice(), m_renderingFinishedFence , nullptr);
+                        m_renderingFinishedFence != VK_NULL_HANDLE;
                 }
         }
 
