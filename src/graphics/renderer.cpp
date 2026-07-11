@@ -43,6 +43,7 @@ namespace vp {
                 CHECK( createCommandPool() )
                 CHECK( createCommandBuffer() )
                 CHECK( recordCommandBuffer(m_gfxCmdBuffer, 0) )    // TODO: This shall be done externally to the renderer....
+                CHECK( createSynchObjects() )
 
                 // TODO: Add other stuff...
         
@@ -58,6 +59,7 @@ namespace vp {
         {
                 // TODO: Add other stuff...
 
+                destroySynchObjects();
                 destroyCommandPool();
                 destroyFramebuffers();
                 destroyGraphicsPipeline();
@@ -989,6 +991,106 @@ namespace vp {
         }
 
 
+        /*!
+         * @brief Renderer::drawFrame
+         *
+        */
+        void Renderer::drawFrame()
+        {
+                // TODO: Add implementation...
+        }
+
+
+        /*!
+         * @brief Renderer::createSynchObjects
+         * Creates the synchronization objects required by the renderer to synchronize
+         * work between CPU and GPU (acquisition, rendering and presentation on swapchain images).
+         * @return True on success, false otherwise
+         *
+         * @note Vulkan is an explicit low level API so is required to explicitly handle
+         * synchronization between CPU and GPU.
+         * There are different synchronization objects, in particular:
+         *
+         * - Semaphores: those are used to synchronize operations within GPU only (GPU to GPU operations).
+         *      For example, they can be used to synchronize work being sent to different queues of the GPU,
+         *      or the work being sent to the same queue.
+         *      Two types of semaphore exist, binary and timeline.
+         *
+         * - Fences: those are used to synchronize operations between GPU to CPU (GPU to CPU operations only!).
+         *      They can be used to signal to the CPU when a task, sent to the GPU for execution, is completed.
+         *      They are useful when the CPU needs to wait for the completion of a task executed by the GPU, calling
+         *      the wait on the fence will actually block the CPU thread.
+         *      A fence is either int the signaled or unsignaled state (similar to a binary semaphore).
+         *
+         *      WARNING:  Fences must be reset manually by the CPU.
+         *
+         * - Pipeline barriers: this is not really a synchronization object but a synchronization command
+         *      that can be recorded into a command buffer.
+         *      Those are used to synchronize operations between the commands sent to a single queue of the GPU.
+         *      For example, they are used to ensure that data produced executing command A can be safely read
+         *      by the command B, with A and B being recorder into the same command buffer (the GPU may execute A
+         *      and B in parallel).
+        */
+        bool Renderer::createSynchObjects()
+        {
+                VkSemaphoreCreateInfo semInfo {};
+                semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+                VkFenceCreateInfo fenceInfo {};
+                fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+                // Create "image available" semaphore
+                if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: failed to create \"image available\" semaphore, vkCreateSemaphore() failed!");
+                        return false;
+                }
+
+                // Create "rendering finished" semaphore
+                if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_renderingFinishedSemaphore) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: failed to create \"rendering finished\" semaphore, vkCreateSemaphore() failed!");
+                        return false;
+                }
+
+                // Create "presentation finished" fence
+                if( vkCreateFence(m_context.getLogicalDevice(), &fenceInfo, nullptr, &m_presentationFinishedFence) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: failed to create \"image available\" semaphore, vkCreateSemaphore() failed!");
+                        return false;
+                }
+
+                return true;
+        }
+
+
+        /*!
+         * @brief Renderer::createSynchObjects
+         * Destroys the synchronization objects used by the renderer
+        */
+        void Renderer::destroySynchObjects()
+        {
+                // Destroy "image available" semaphore
+                if(m_imageAvailableSemaphore != VK_NULL_HANDLE)
+                {
+                        vkDestroySemaphore(m_context.getLogicalDevice(), m_imageAvailableSemaphore , nullptr);
+                        m_imageAvailableSemaphore = VK_NULL_HANDLE;
+                }
+
+                // Destroy "rendering finished" semaphore
+                if(m_renderingFinishedSemaphore != VK_NULL_HANDLE)
+                {
+                        vkDestroySemaphore(m_context.getLogicalDevice(), m_renderingFinishedSemaphore , nullptr);
+                        m_renderingFinishedSemaphore = VK_NULL_HANDLE;
+                }
+
+                // Destroy "presentation finished" fence
+                if(m_presentationFinishedFence != VK_NULL_HANDLE)
+                {
+                        vkDestroyFence(m_context.getLogicalDevice(), m_presentationFinishedFence , nullptr);
+                        m_presentationFinishedFence != VK_NULL_HANDLE;
+                }
+        }
 
 }
 

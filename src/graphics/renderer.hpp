@@ -29,6 +29,8 @@ namespace vp {
 
                 inline bool     isInit() const          { return m_context.isInit(); }
 
+                void            drawFrame();
+
         private:
 
                 /**
@@ -84,6 +86,9 @@ namespace vp {
                 bool            createCommandBuffer();
                 bool            recordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
 
+                bool            createSynchObjects();
+                void            destroySynchObjects();
+
                 bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
@@ -113,6 +118,10 @@ namespace vp {
 
                 VkCommandPool                   m_gfxCommandPool = VK_NULL_HANDLE;              ///< Pool that manages commands that will be sent by the renderer to the graphics queue
                 VkCommandBuffer                 m_gfxCmdBuffer = VK_NULL_HANDLE;                ///< Cmmand buffer that will be sent by the renderer to the graphics queue
+        
+                VkSemaphore                     m_imageAvailableSemaphore = VK_NULL_HANDLE;     ///< Semaphore used to signal that an image has been acquired from the swapchain (we are ready to render on it)
+                VkSemaphore                     m_renderingFinishedSemaphore = VK_NULL_HANDLE;  ///< Semaphore used to signal that rendering is done and the image can be presented
+                VkFence                         m_presentationFinishedFence = VK_NULL_HANDLE;   ///< Fence used to signal that the rendered image has been presented
         };
 
 }
