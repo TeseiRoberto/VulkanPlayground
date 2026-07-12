@@ -10,6 +10,23 @@ namespace vp {
 
 
         /**
+         * @brief Renderer::Renderer
+         * Renderer dummy constructor
+        */
+        Renderer::Renderer()
+        {
+                // Invalidate element in arrays
+                for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+                {
+                        m_gfxCmdBuffers[i]                      = VK_NULL_HANDLE;
+                        m_imageAvailableSemaphores[i]           = VK_NULL_HANDLE;
+                        m_renderingFinishedSemaphores[i]        = VK_NULL_HANDLE;
+                        m_renderingFinishedFences[i]            = VK_NULL_HANDLE;
+                }
+        }
+
+
+        /**
          * @brief Renderer::~Renderer
          * Renderer destructor, calls terminate if not called yet
         */
@@ -41,9 +58,10 @@ namespace vp {
                 CHECK( createGraphicsPipeline() )
                 CHECK( createFramebuffers() )
                 CHECK( createCommandPool() )
-                CHECK( createCommandBuffer() )
+                CHECK( createCommandBuffers() )
                 CHECK( createSynchObjects() )
 
+                m_currFrameNum = 0;
                 // TODO: Add other stuff...
         
                 return true;
@@ -93,24 +111,24 @@ namespace vp {
         void Renderer::drawFrame()
         {
                 // Wait for the previous frame to finish and reset the fence
-                vkWaitForFences(m_context.getLogicalDevice(), 1, &m_renderingFinishedFence, VK_TRUE, UINT64_MAX);
+                vkWaitForFences(m_context.getLogicalDevice(), 1, &m_renderingFinishedFences[m_currFrameNum], VK_TRUE, UINT64_MAX);
                 
-                vkResetFences(m_context.getLogicalDevice(), 1, &m_renderingFinishedFence);
+                vkResetFences(m_context.getLogicalDevice(), 1, &m_renderingFinishedFences[m_currFrameNum]);
 
                 // Acquire swapchain image
                 uint32_t imageIndex = 0;
-                vkAcquireNextImageKHR(m_context.getLogicalDevice(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+                vkAcquireNextImageKHR(m_context.getLogicalDevice(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_currFrameNum], VK_NULL_HANDLE, &imageIndex);
         
                 // Record command buffer
-                if( !recordCommandBuffer(m_gfxCmdBuffer, imageIndex) )
+                if( !recordCommandBuffer(m_gfxCmdBuffers[m_currFrameNum], imageIndex) )
                         return;
 
                 // Define semaphores to be waited before beginning command buffer execution and the pipeline stages that are "locked" by the them
-                VkSemaphore* semToWait = &m_imageAvailableSemaphore;
+                VkSemaphore* semToWait = &m_imageAvailableSemaphores[m_currFrameNum];
                 VkPipelineStageFlags stageToWait[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
                 // Define semaphores that shall be signaled when command buffer execution is over
-                VkSemaphore* semToSignal = &m_renderingFinishedSemaphore;
+                VkSemaphore* semToSignal = &m_renderingFinishedSemaphores[m_currFrameNum];
 
                 // We now create a struct to describe how the command shall be submitted to the graphics queue
                 VkSubmitInfo submitInfo {};
@@ -120,12 +138,12 @@ namespace vp {
                 submitInfo.pWaitSemaphores              = semToWait;
                 submitInfo.pWaitDstStageMask            = stageToWait;
                 submitInfo.commandBufferCount           = 1;
-                submitInfo.pCommandBuffers              = &m_gfxCmdBuffer;
+                submitInfo.pCommandBuffers              = &m_gfxCmdBuffers[m_currFrameNum];
                 submitInfo.signalSemaphoreCount         = 1;
                 submitInfo.pSignalSemaphores            = semToSignal;
 
                 // Submit command buffer to queue
-                if( vkQueueSubmit(m_context.getGraphicsQueue(), 1, &submitInfo, m_renderingFinishedFence) != VK_SUCCESS )
+                if( vkQueueSubmit(m_context.getGraphicsQueue(), 1, &submitInfo, m_renderingFinishedFences[m_currFrameNum]) != VK_SUCCESS )
                 {
                         LOG_ERROR("Renderer::drawFrame() failed: failed to submit command buffer to queue, vkQueueSubmit() failed!");
                         return;
@@ -146,6 +164,9 @@ namespace vp {
                         LOG_ERROR("Renderer::drawFrame() failed: failed to present rendered image, vkQueuePresent() failed!");
                         return;
                 }
+
+                // Update current frame index
+                m_currFrameNum = (m_currFrameNum + 1) % MAX_FRAMES_IN_FLIGHT;
         }
 
 
@@ -956,13 +977,15 @@ namespace vp {
 
                 vkDestroyCommandPool(m_context.getLogicalDevice(), m_gfxCommandPool, nullptr);
                 m_gfxCommandPool = VK_NULL_HANDLE;
-                m_gfxCmdBuffer = VK_NULL_HANDLE;
+
+                for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+                        m_gfxCmdBuffers[i] = VK_NULL_HANDLE;
         }
 
 
         /**
-         * @brief Renderer::createCommandBuffer
-         * Creates a command buffer that can be sent to the graphics queue of the GPU.
+         * @brief Renderer::createCommandBuffers
+         * Creates the command buffers that will be sent to the graphics queue of the GPU.
          * @return True on success, false on failure
          *
          * @note A VkCommandBuffer is a vulkan object in which commands that shall be executed
@@ -974,18 +997,18 @@ namespace vp {
          * A VkCommandBuffer is automatically freed when the pool from which it has been created
          * gets destroyed
         */
-        bool Renderer::createCommandBuffer()
+        bool Renderer::createCommandBuffers()
         {
                 VkCommandBufferAllocateInfo cmdAllocInfo {};
 
                 cmdAllocInfo.sType                      = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
                 cmdAllocInfo.commandPool                = m_gfxCommandPool;
                 cmdAllocInfo.level                      = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-                cmdAllocInfo.commandBufferCount         = 1;
+                cmdAllocInfo.commandBufferCount         = MAX_FRAMES_IN_FLIGHT;
 
-                if( vkAllocateCommandBuffers(m_context.getLogicalDevice(), &cmdAllocInfo, &m_gfxCmdBuffer) != VK_SUCCESS )
+                if( vkAllocateCommandBuffers(m_context.getLogicalDevice(), &cmdAllocInfo, m_gfxCmdBuffers) != VK_SUCCESS )
                 {
-                        LOG_ERROR("renderer::init() failed: cannot create graphics command buffer, vkAllocateCommandBuffers() failed!");
+                        LOG_ERROR("renderer::init() failed: cannot create graphics command buffers, vkAllocateCommandBuffers() failed!");
                         return false;
                 }
 
@@ -1118,25 +1141,28 @@ namespace vp {
                 fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
                 fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-                // Create "image available" semaphore
-                if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS )
+                for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
                 {
-                        LOG_ERROR("renderer::init() failed: failed to create \"image available\" semaphore, vkCreateSemaphore() failed!");
-                        return false;
-                }
+                        // Create i-th "image available" semaphore
+                        if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS )
+                        {
+                                LOG_ERROR("renderer::init() failed: failed to create \"image available\" semaphore, vkCreateSemaphore() failed!");
+                                return false;
+                        }
 
-                // Create "rendering finished" semaphore
-                if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_renderingFinishedSemaphore) != VK_SUCCESS )
-                {
-                        LOG_ERROR("renderer::init() failed: failed to create \"rendering finished\" semaphore, vkCreateSemaphore() failed!");
-                        return false;
-                }
+                        // Create i-th "rendering finished" semaphore
+                        if( vkCreateSemaphore(m_context.getLogicalDevice(), &semInfo, nullptr, &m_renderingFinishedSemaphores[i]) != VK_SUCCESS )
+                        {
+                                LOG_ERROR("renderer::init() failed: failed to create \"rendering finished\" semaphore, vkCreateSemaphore() failed!");
+                                return false;
+                        }
 
-                // Create "rendering finished" fence
-                if( vkCreateFence(m_context.getLogicalDevice(), &fenceInfo, nullptr, &m_renderingFinishedFence) != VK_SUCCESS )
-                {
-                        LOG_ERROR("renderer::init() failed: failed to create \"rendering finished\" semaphore, vkCreateFence() failed!");
-                        return false;
+                        // Create i-th "rendering finished" fence
+                        if( vkCreateFence(m_context.getLogicalDevice(), &fenceInfo, nullptr, &m_renderingFinishedFences[i]) != VK_SUCCESS )
+                        {
+                                LOG_ERROR("renderer::init() failed: failed to create \"rendering finished\" semaphore, vkCreateFence() failed!");
+                                return false;
+                        }
                 }
 
                 return true;
@@ -1149,25 +1175,28 @@ namespace vp {
         */
         void Renderer::destroySynchObjects()
         {
-                // Destroy "image available" semaphore
-                if(m_imageAvailableSemaphore != VK_NULL_HANDLE)
+                for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
                 {
-                        vkDestroySemaphore(m_context.getLogicalDevice(), m_imageAvailableSemaphore , nullptr);
-                        m_imageAvailableSemaphore = VK_NULL_HANDLE;
-                }
+                        // Destroy i-th "image available" semaphore
+                        if(m_imageAvailableSemaphores[i] != VK_NULL_HANDLE)
+                        {
+                                vkDestroySemaphore(m_context.getLogicalDevice(), m_imageAvailableSemaphores[i] , nullptr);
+                                m_imageAvailableSemaphores[i] = VK_NULL_HANDLE;
+                        }
 
-                // Destroy "rendering finished" semaphore
-                if(m_renderingFinishedSemaphore != VK_NULL_HANDLE)
-                {
-                        vkDestroySemaphore(m_context.getLogicalDevice(), m_renderingFinishedSemaphore , nullptr);
-                        m_renderingFinishedSemaphore = VK_NULL_HANDLE;
-                }
+                        // Destroy i-th "rendering finished" semaphore
+                        if(m_renderingFinishedSemaphores[i] != VK_NULL_HANDLE)
+                        {
+                                vkDestroySemaphore(m_context.getLogicalDevice(), m_renderingFinishedSemaphores[i] , nullptr);
+                                m_renderingFinishedSemaphores[i] = VK_NULL_HANDLE;
+                        }
 
-                // Destroy "rendering finished" fence
-                if(m_renderingFinishedFence != VK_NULL_HANDLE)
-                {
-                        vkDestroyFence(m_context.getLogicalDevice(), m_renderingFinishedFence , nullptr);
-                        m_renderingFinishedFence != VK_NULL_HANDLE;
+                        // Destroy i-th "rendering finished" fence
+                        if(m_renderingFinishedFences[i] != VK_NULL_HANDLE)
+                        {
+                                vkDestroyFence(m_context.getLogicalDevice(), m_renderingFinishedFences[i] , nullptr);
+                                m_renderingFinishedFences[i] = VK_NULL_HANDLE;
+                        }
                 }
         }
 

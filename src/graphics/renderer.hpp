@@ -21,7 +21,7 @@ namespace vp {
 
         class Renderer {
         public:
-                explicit        Renderer() = default;
+                explicit        Renderer();
                                 ~Renderer();
 
                 bool            init(GLFWwindow* wnd);
@@ -83,7 +83,7 @@ namespace vp {
                 bool            createCommandPool();
                 void            destroyCommandPool();
 
-                bool            createCommandBuffer();
+                bool            createCommandBuffers();
                 bool            recordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
 
                 bool            createSynchObjects();
@@ -97,31 +97,34 @@ namespace vp {
                 uint32_t        findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props);
 
 
-                VulkanContext                   m_context;                                      ///< Vulkan context instance used by the renderer
+                static constexpr uint32_t       MAX_FRAMES_IN_FLIGHT = 2;                               ///< Max number of frames that can be rendered asinchronously by the renderer
+                uint32_t                        m_currFrameNum = 0;                                     ///< Number/index of the current frame being rendered
 
-                VkSurfaceKHR                    m_surface = VK_NULL_HANDLE;                     ///< Surface on which images produced by the renderer will be presented
+                VulkanContext                   m_context;                                              ///< Vulkan context instance used by the renderer
+
+                VkSurfaceKHR                    m_surface = VK_NULL_HANDLE;                             ///< Surface on which images produced by the renderer will be presented
                 
-                SwapchainProps                  m_swapchainProps;                               ///< Properties of the swapchain used by the renderer
-                VkSwapchainKHR                  m_swapchain = VK_NULL_HANDLE;                   ///< Swapchain that owns images on which renderer will draw
-                std::vector<VkImage>            m_swapchainImages;                              ///< Handles to images owned by the swapchain that the renderer is using
-                std::vector<VkImageView>        m_swapchainImagesViews;                         ///< Handles to views of images owned by the swapchain 
+                SwapchainProps                  m_swapchainProps;                                       ///< Properties of the swapchain used by the renderer
+                VkSwapchainKHR                  m_swapchain = VK_NULL_HANDLE;                           ///< Swapchain that owns images on which renderer will draw
+                std::vector<VkImage>            m_swapchainImages;                                      ///< Handles to images owned by the swapchain that the renderer is using
+                std::vector<VkImageView>        m_swapchainImagesViews;                                 ///< Handles to views of images owned by the swapchain 
 
-                VkFormat                        m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;  ///< Image format used for the depth image attachment
-                Image                           m_depthAttachment;                              ///< Image used to implement depth test
-                VkImageView                     m_depthAttachmentView = VK_NULL_HANDLE;         ///< View used for the deph attachment image
+                VkFormat                        m_depthAttachmentFormat = VK_FORMAT_UNDEFINED;          ///< Image format used for the depth image attachment
+                Image                           m_depthAttachment;                                      ///< Image used to implement depth test
+                VkImageView                     m_depthAttachmentView = VK_NULL_HANDLE;                 ///< View used for the deph attachment image
 
-                VkRenderPass                    m_renderPass = VK_NULL_HANDLE;                  ///< The main render pass used by the renderer
-                VkPipelineLayout                m_pipelineLayout = VK_NULL_HANDLE;              ///< Describes the resources used by the renderer's graphics pipeline
-                VkPipeline                      m_pipeline = VK_NULL_HANDLE;                    ///< Handle to the graphics pipeline used by the renderer to draw graphics
+                VkRenderPass                    m_renderPass = VK_NULL_HANDLE;                          ///< The main render pass used by the renderer
+                VkPipelineLayout                m_pipelineLayout = VK_NULL_HANDLE;                      ///< Describes the resources used by the renderer's graphics pipeline
+                VkPipeline                      m_pipeline = VK_NULL_HANDLE;                            ///< Handle to the graphics pipeline used by the renderer to draw graphics
 
-                std::vector<VkFramebuffer>      m_swapchainFramebuffers;                        ///< Framebuffer objects used to bind swapchain images before rendering operations
+                std::vector<VkFramebuffer>      m_swapchainFramebuffers;                                ///< Framebuffer objects used to bind swapchain images before rendering operations
 
-                VkCommandPool                   m_gfxCommandPool = VK_NULL_HANDLE;              ///< Pool that manages commands that will be sent by the renderer to the graphics queue
-                VkCommandBuffer                 m_gfxCmdBuffer = VK_NULL_HANDLE;                ///< Cmmand buffer that will be sent by the renderer to the graphics queue
+                VkCommandPool                   m_gfxCommandPool = VK_NULL_HANDLE;                      ///< Pool that manages commands that will be sent by the renderer to the graphics queue
+                VkCommandBuffer                 m_gfxCmdBuffers[MAX_FRAMES_IN_FLIGHT];                  ///< Command buffers that will be sent by the renderer to the graphics queue
         
-                VkSemaphore                     m_imageAvailableSemaphore = VK_NULL_HANDLE;     ///< Semaphore used to signal that an image has been acquired from the swapchain (we are ready to render on it)
-                VkSemaphore                     m_renderingFinishedSemaphore = VK_NULL_HANDLE;  ///< Semaphore used to signal that rendering is done and the image can be presented
-                VkFence                         m_renderingFinishedFence = VK_NULL_HANDLE;      ///< Fence used to signal that rendering is done, command buffer can be reused and the image can be presented
+                VkSemaphore                     m_imageAvailableSemaphores [MAX_FRAMES_IN_FLIGHT];      ///< Semaphores used to signal that an image has been acquired from the swapchain (we are ready to render on it)
+                VkSemaphore                     m_renderingFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];    ///< Semaphores used to signal that rendering is done and one of the images can be presented
+                VkFence                         m_renderingFinishedFences[MAX_FRAMES_IN_FLIGHT];        ///< Fences used to signal that rendering is done, a command buffer can be reused
         };
 
 }
