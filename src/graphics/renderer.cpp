@@ -15,7 +15,7 @@ namespace vp {
         */
         Renderer::Renderer()
         {
-                // Invalidate element in arrays
+                // Invalidate elements in arrays
                 for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
                 {
                         m_gfxCmdBuffers[i]                      = VK_NULL_HANDLE;
@@ -61,9 +61,10 @@ namespace vp {
                 CHECK( createCommandBuffers() )
                 CHECK( createSynchObjects() )
 
+                // TODO: Define API to handle buffer creation and management...
+                CHECK( createTriangleVertexBuffer() )
+
                 m_currFrameNum = 0;
-                // TODO: Add other stuff...
-        
                 return true;
         }
 
@@ -82,6 +83,8 @@ namespace vp {
                         // Wait for device to finish all operations
                         vkDeviceWaitIdle(m_context.getLogicalDevice());
                 }
+
+                destroyTriangleVertexBuffer();
 
                 destroySynchObjects();
                 destroyCommandPool();
@@ -431,124 +434,8 @@ namespace vp {
         }
 
 
-
         /**
-         * @brief Renderer::createImage
-         * Creates a VkImage with the given parameteres and allocates memory for it
-         * @param image Output variable in which data for the created image will be stored
-         * @param width Width of the image to be crated, expressed in pixels
-         * @param height Height of the image to be crated, expressed in pixels
-         * @param depth Depth of the image to be crated (intended as num. of layers for the image)
-         * @param type Type of image to be created
-         * @param mipLevels number of mip-map levels 
-         * @param format Format of the texels that will compose the image to be created
-         * @param tilingMode Specifies how the texels of the image should be arranged in memory
-         * @param usageFlags Flags describing how the image will be used
-         * @return True on success, false on failure
-         *
-        */
-        bool Renderer::createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
-                        VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags)
-        {
-                VkImageCreateInfo imageInfo {};
-                imageInfo.sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-                imageInfo.imageType             = type;
-                imageInfo.format                = format;
-                imageInfo.extent.width          = width;
-                imageInfo.extent.height         = height;
-                imageInfo.extent.depth          = depth;
-                imageInfo.mipLevels             = mipLevels;
-                imageInfo.arrayLayers           = 1;
-                imageInfo.samples               = VK_SAMPLE_COUNT_1_BIT;
-                imageInfo.tiling                = tilingMode;
-                imageInfo.usage                 = usageFlags;
-                imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
-
-                // Create the vulkan image object
-                if( vkCreateImage(m_context.getLogicalDevice(), &imageInfo, nullptr, &image.handle) != VK_SUCCESS)
-                {
-                        LOG_ERROR("Renderer::createImage() failed: vkCreateImage() failed!");
-                        return false;
-                }
-
-                // Retrieve memory requirements for the image
-                VkMemoryRequirements imageMemRequirements;
-                vkGetImageMemoryRequirements(m_context.getLogicalDevice(), image.handle, &imageMemRequirements);
-        
-                VkMemoryAllocateInfo memAllocInfo {};
-                memAllocInfo.sType              = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-                memAllocInfo.allocationSize     = imageMemRequirements.size;
-                memAllocInfo.memoryTypeIndex    = findMemoryType(imageMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        
-                // Allocate memory for the image
-                if( vkAllocateMemory(m_context.getLogicalDevice(), &memAllocInfo, nullptr, &image.memory) != VK_SUCCESS )
-                {
-                        LOG_ERROR("Renderer::createImage() failed: vkAllocateMemory() failed!");
-                        destroyImage(image);
-                        return false;
-                }
-
-                // Bind memory to the image
-                vkBindImageMemory(m_context.getLogicalDevice(), image.handle, image.memory, 0);
-
-                return true;
-        }
-
-
-        /**
-         * @brief Renderer::destroyImage
-         * Destroys the given image and deallocates its resources
-         * @param image Image to be destroyed
-        */
-        void Renderer::destroyImage(Image& image)
-        {
-                // Destroy the image object
-                if(image.handle != VK_NULL_HANDLE)
-                {
-                        vkDestroyImage(m_context.getLogicalDevice(), image.handle, nullptr);
-                        image.handle = VK_NULL_HANDLE;
-                }
-
-                // Free memory allocated for the image
-                if(image.memory != VK_NULL_HANDLE)
-                {
-                        vkFreeMemory(m_context.getLogicalDevice(), image.memory, nullptr);
-                        image.memory = VK_NULL_HANDLE;
-                }
-        }
-
-
-        /**
-         * @brief Renderer::findMemoryType
-         * Queries memory properties of the physical device used by the renderer and
-         * searches the right type of GPU memory to be used according to the given parameters
-         * @param typeFilter Bit field used to specify suitable memory types
-         * @param props Flags used to specify the properties that shall be satisfied by the memory type
-         * @return Index of the memory type (on the physical device) that shall be used,
-         *      UINT32_MAX if such memory type is not found
-        */
-        uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props)
-        {
-                VkPhysicalDeviceMemoryProperties memProps {};
-
-                // Query memory properties of the physical device
-                vkGetPhysicalDeviceMemoryProperties(m_context.getPhysicalDevice(), &memProps);
-
-                for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
-                {
-                        if( typeFilter & (1 << i) && 
-                                (memProps.memoryTypes[i].propertyFlags & props) == props )
-                        {
-                                return i;
-                        }
-                }
-
-                return UINT32_MAX;
-        }
-
-
-        /**
-         * @brief Renderer::RenderPass
+         * @brief Renderer::createRenderPass
          * Creates the main render pass used by the renderer
          * @return True on success, false otherwise
          * @note VkRenderPass is a vulkan object that describes the attachments to be used during rendering
@@ -690,14 +577,36 @@ namespace vp {
                 shaderStagesInfo[1].pName       = "main";
 
                 // ====================[ Vertex input description (fixed function stage) ]====================
+                // The scope of this section is to describe to Vulkan the format of the vertices that will be passed as input to the pipeline
+                // First we define a vertex binding point (vertex buffers will be bound to those "binding points")
+                VkVertexInputBindingDescription vrtxBindingInfo {};
+
+                vrtxBindingInfo.binding         = 0;
+                vrtxBindingInfo.stride          = sizeof(float) * 6;            // 3 float for positiona and 3 for color
+                vrtxBindingInfo.inputRate       = VK_VERTEX_INPUT_RATE_VERTEX;
+
+                // Secondly, we describe the format of each attributes of a single vertex and how those are laid out in memory
+                VkVertexInputAttributeDescription vrtxAttribsInfo[2];
+
+                vrtxAttribsInfo[0].binding       = 0;
+                vrtxAttribsInfo[0].location      = 0;                           // Position attribute of the vertex
+                vrtxAttribsInfo[0].format        = VK_FORMAT_R32G32B32_SFLOAT;
+                vrtxAttribsInfo[0].offset        = 0;
+
+                vrtxAttribsInfo[1].binding       = 0;
+                vrtxAttribsInfo[1].location      = 1;                           // Color attribute of the vertex
+                vrtxAttribsInfo[1].format        = VK_FORMAT_R32G32B32_SFLOAT;
+                vrtxAttribsInfo[1].offset        = sizeof(float) * 3;
+
+                // Now we can combine binding point description and attributes descriptions
                 // This struct describes how vertices are passed as input to the vertex shader, this is similar to glVertexAttribPointer() call in OpenGL API
                 VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
 
                 vertexInputInfo.sType                                   = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-                vertexInputInfo.vertexBindingDescriptionCount           = 0;
-                vertexInputInfo.pVertexBindingDescriptions              = nullptr;
-                vertexInputInfo.vertexAttributeDescriptionCount         = 0;
-                vertexInputInfo.pVertexAttributeDescriptions            = nullptr;
+                vertexInputInfo.vertexBindingDescriptionCount           = 1;
+                vertexInputInfo.pVertexBindingDescriptions              = &vrtxBindingInfo;
+                vertexInputInfo.vertexAttributeDescriptionCount         = 2;
+                vertexInputInfo.pVertexAttributeDescriptions            = vrtxAttribsInfo;
 
                 // ====================[ Input assembly stage (fixed function stage) ]====================
                 // This stage describes how vertices are grouped toghether to create primitives
@@ -1087,7 +996,14 @@ namespace vp {
 
                 vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 
-                vkCmdDraw(cmdBuffer, 3, 1, 0, 0);       // Params are: vertex count, instance count, first vertex, first instance
+                // Bind vertex buffer
+                VkBuffer vertexBuffers[] = { m_vertexBuffer.handle };
+                VkDeviceSize offsets[] = { 0 };
+
+                vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
+
+                // Issue a draw call, params are: vertex count, instance count, first vertex, first instance
+                vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
 
                 vkCmdEndRenderPass(cmdBuffer);
 
@@ -1198,6 +1114,249 @@ namespace vp {
                                 m_renderingFinishedFences[i] = VK_NULL_HANDLE;
                         }
                 }
+        }
+
+
+        /**
+         * @brief Renderer::createBuffer
+         * Creates a VkBuffer with the given parameteres and allocates memory for it
+         * @param buffer Output variable in which data for the created buffer will be stored
+         * @param size minimum size that shall be allocated for the buffer, expressed in bytes.
+         *      This method will allocate at least size bytes for the buffer.
+         * @param usage Purpouse for which the buffer will be used
+        */
+        bool Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage)
+        {
+                VkBufferCreateInfo bufferInfo {};
+
+                bufferInfo.sType        = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+                bufferInfo.size         = size;
+                bufferInfo.usage        = usage;
+                bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
+
+                // Create the vulkan buffer object
+                if( vkCreateBuffer(m_context.getLogicalDevice(), &bufferInfo, nullptr, &buffer.handle) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::createBuffer() failed: vkCreateBuffer() failed!");
+                        return false;
+                }
+
+                // Retrieve memory requirements for the buffer
+                VkMemoryRequirements bufferMemRequirements;
+                vkGetBufferMemoryRequirements(m_context.getLogicalDevice(), buffer.handle, &bufferMemRequirements);
+
+                VkMemoryAllocateInfo memAllocInfo {};
+
+                memAllocInfo.sType              = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+                memAllocInfo.allocationSize     = bufferMemRequirements.size;
+                memAllocInfo.memoryTypeIndex    = findMemoryType(
+                                                                bufferMemRequirements.memoryTypeBits,
+                                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                                                        );
+
+                // TODO: For now this method can only allocate buffers that are host visible! This should be fixed!
+
+                // Allocate memory for the buffer
+                if( vkAllocateMemory(m_context.getLogicalDevice(), &memAllocInfo, nullptr, &buffer.memory) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::createBuffer() failed: vkAllocateMemory() failed!");
+                        return false;
+                }
+
+                // Bind memory to the buffer
+                vkBindBufferMemory(m_context.getLogicalDevice(), buffer.handle, buffer.memory, 0);
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyBuffer
+         * Destroys the given buffer and deallocates its memory
+         * @param buffer Buffer to be destroyed
+        */
+        void Renderer::destroyBuffer(Buffer& buffer)
+        {
+                if(buffer.handle != VK_NULL_HANDLE)
+                {
+                        vkDestroyBuffer(m_context.getLogicalDevice(), buffer.handle, nullptr);
+                        buffer.handle = VK_NULL_HANDLE;
+                }
+
+                if(buffer.memory != VK_NULL_HANDLE)
+                {
+                        vkFreeMemory(m_context.getLogicalDevice(), buffer.memory, nullptr);
+                        buffer.memory = VK_NULL_HANDLE;
+                }
+        }
+
+
+        /**
+         * @brief Renderer::createImage
+         * Creates a VkImage with the given parameteres and allocates memory for it
+         * @param image Output variable in which data for the created image will be stored
+         * @param width Width of the image to be crated, expressed in pixels
+         * @param height Height of the image to be crated, expressed in pixels
+         * @param depth Depth of the image to be crated (intended as num. of layers for the image)
+         * @param type Type of image to be created
+         * @param mipLevels number of mip-map levels 
+         * @param format Format of the texels that will compose the image to be created
+         * @param tilingMode Specifies how the texels of the image should be arranged in memory
+         * @param usageFlags Flags describing how the image will be used
+         * @return True on success, false on failure
+        */
+        bool Renderer::createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
+                        VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags)
+        {
+                VkImageCreateInfo imageInfo {};
+                imageInfo.sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+                imageInfo.imageType             = type;
+                imageInfo.format                = format;
+                imageInfo.extent.width          = width;
+                imageInfo.extent.height         = height;
+                imageInfo.extent.depth          = depth;
+                imageInfo.mipLevels             = mipLevels;
+                imageInfo.arrayLayers           = 1;
+                imageInfo.samples               = VK_SAMPLE_COUNT_1_BIT;
+                imageInfo.tiling                = tilingMode;
+                imageInfo.usage                 = usageFlags;
+                imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
+
+                // Create the vulkan image object
+                if( vkCreateImage(m_context.getLogicalDevice(), &imageInfo, nullptr, &image.handle) != VK_SUCCESS)
+                {
+                        LOG_ERROR("Renderer::createImage() failed: vkCreateImage() failed!");
+                        return false;
+                }
+
+                // Retrieve memory requirements for the image
+                VkMemoryRequirements imageMemRequirements;
+                vkGetImageMemoryRequirements(m_context.getLogicalDevice(), image.handle, &imageMemRequirements);
+        
+                VkMemoryAllocateInfo memAllocInfo {};
+                memAllocInfo.sType              = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+                memAllocInfo.allocationSize     = imageMemRequirements.size;
+                memAllocInfo.memoryTypeIndex    = findMemoryType(imageMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        
+                // Allocate memory for the image
+                if( vkAllocateMemory(m_context.getLogicalDevice(), &memAllocInfo, nullptr, &image.memory) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::createImage() failed: vkAllocateMemory() failed!");
+                        destroyImage(image);
+                        return false;
+                }
+
+                // Bind memory to the image
+                vkBindImageMemory(m_context.getLogicalDevice(), image.handle, image.memory, 0);
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyImage
+         * Destroys the given image and deallocates its resources
+         * @param image Image to be destroyed
+        */
+        void Renderer::destroyImage(Image& image)
+        {
+                // Destroy the image object
+                if(image.handle != VK_NULL_HANDLE)
+                {
+                        vkDestroyImage(m_context.getLogicalDevice(), image.handle, nullptr);
+                        image.handle = VK_NULL_HANDLE;
+                }
+
+                // Free memory allocated for the image
+                if(image.memory != VK_NULL_HANDLE)
+                {
+                        vkFreeMemory(m_context.getLogicalDevice(), image.memory, nullptr);
+                        image.memory = VK_NULL_HANDLE;
+                }
+        }
+
+
+        /**
+         * @brief Renderer::findMemoryType
+         * Queries memory properties of the physical device used by the renderer and
+         * searches the right type of GPU memory to be used according to the given parameters
+         * @param typeFilter Bit field used to specify suitable memory types
+         * @param props Flags used to specify the properties that shall be satisfied by the memory type
+         * @return Index of the memory type (on the physical device) that shall be used,
+         *      UINT32_MAX if such memory type is not found
+        */
+        uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props)
+        {
+                VkPhysicalDeviceMemoryProperties memProps {};
+
+                // Query memory properties of the physical device
+                vkGetPhysicalDeviceMemoryProperties(m_context.getPhysicalDevice(), &memProps);
+
+                for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
+                {
+                        if( typeFilter & (1 << i) && 
+                                (memProps.memoryTypes[i].propertyFlags & props) == props )
+                        {
+                                return i;
+                        }
+                }
+
+                return UINT32_MAX;
+        }
+
+
+        /**
+         * @brief Renderer::createTriangleVertexBuffer
+         * Temporary method used to create and populate a vertex buffer necessary to render a colored triangle
+        */
+        bool Renderer::createTriangleVertexBuffer()
+        {
+                // Check if buffer has already been allocated and mapped
+                if(m_vertexBufferPtr != nullptr)
+                        return true;
+
+                const float vertexData[] = {
+                        // position             color
+                        -0.5f, 0.5f, 0.0f,      1.0f, 0.0f, 0.0f,       // Bottom left
+                        0.0f, -0.5f, 0.0f,      0.0f, 1.0f, 0.0f,       // Top
+                        0.5f, 0.5f, 0.0f,       0.0f, 0.0f, 1.0f,       // Bottom right
+                };
+
+                // Create the vertex buffer
+                if( !createBuffer(m_vertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) )
+                {
+                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed, creation of vertex buffer object failed!");
+                        return false;
+                }
+
+                // Map the vertex buffer memory so that CPU can access it
+                if( vkMapMemory(m_context.getLogicalDevice(), m_vertexBuffer.memory, 0, VK_WHOLE_SIZE, 0, &m_vertexBufferPtr) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed, creation of vertex buffer object failed!");
+                        return false;
+                }
+
+                // Copy data into the vertex buffer
+                memcpy(m_vertexBufferPtr, vertexData, sizeof(vertexData));
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyTriangleVertexBuffer
+         * Temporary method used to destroy the vertex buffer used to render a colored triangle
+        */
+        void Renderer::destroyTriangleVertexBuffer()
+        {
+                // Unmap the vertex buffer memory area
+                if(m_vertexBuffer. handle != VK_NULL_HANDLE && m_vertexBuffer.memory != VK_NULL_HANDLE)
+                {
+                        vkUnmapMemory(m_context.getLogicalDevice(), m_vertexBuffer.memory);
+                        m_vertexBufferPtr = nullptr;
+                }
+
+                destroyBuffer(m_vertexBuffer);
         }
 
 }

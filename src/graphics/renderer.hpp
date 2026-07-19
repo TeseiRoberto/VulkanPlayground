@@ -47,8 +47,7 @@ namespace vp {
 
                 /**
                  * @struct Image
-                 * Keeps track of the handle to a vulkan image object and the
-                 * allocated memory for the image data.
+                 * Keeps track of the handle to a vulkan image object and the allocated memory for the image data.
                  *
                  * @note The VkImage object defines the logical properties of a texture (texels format,
                  *      texture size, mipmap levels), such object is used to specify how the GPU should
@@ -59,6 +58,20 @@ namespace vp {
                 struct Image {
                         VkImage                 handle = VK_NULL_HANDLE;        ///< Handle to the image object
                         VkDeviceMemory          memory = VK_NULL_HANDLE;        ///< Handle to the memory buffer allocated for the image data
+                };
+
+
+                /**
+                 * @struct Buffer
+                 * Keeps track of the handle to a vulkan buffer object and the GPU memory allocated for it.
+                 *
+                 * @note The VkBuffer object defines the logical properties of a buffer (GPU memory area).
+                 *      The actual memory area in which data gets stored must be allocated
+                 *      explicitly on the GPU, and then bound to the buffer object.
+                */
+                struct Buffer {
+                        VkBuffer                handle = VK_NULL_HANDLE;        ///< Handle to the buffer object
+                        VkDeviceMemory          memory = VK_NULL_HANDLE;        ///< Handle to the memory area allocated for the buffer
                 };
 
 
@@ -89,10 +102,19 @@ namespace vp {
                 bool            createSynchObjects();
                 void            destroySynchObjects();
 
+
+                bool            createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage);
+                void            destroyBuffer(Buffer& buffer);
+
                 bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
                 void            destroyImage(Image& image);
+
+                // Temporary methods used to render a simple triangle
+                bool            createTriangleVertexBuffer();
+                void            destroyTriangleVertexBuffer();
+                // ==================================================
 
                 uint32_t        findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props);
 
@@ -125,6 +147,11 @@ namespace vp {
                 VkSemaphore                     m_imageAvailableSemaphores [MAX_FRAMES_IN_FLIGHT];      ///< Semaphores used to signal that an image has been acquired from the swapchain (we are ready to render on it)
                 VkSemaphore                     m_renderingFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];    ///< Semaphores used to signal that rendering is done and one of the images can be presented
                 VkFence                         m_renderingFinishedFences[MAX_FRAMES_IN_FLIGHT];        ///< Fences used to signal that rendering is done, a command buffer can be reused
+
+                // Temporary data used to render a simple triangle
+                Buffer                          m_vertexBuffer = {};                                    ///< Vertex buffer used to store triangle's data
+                void*                           m_vertexBufferPtr = nullptr;                            ///< Pointer to the mapped memory area allocated for the vertex buffer
+                // ==================================================
         };
 
 }
