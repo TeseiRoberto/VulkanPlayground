@@ -63,7 +63,7 @@ namespace vp {
                 CHECK( createStagingBuffer(m_stagingBuffer, 1024) )
 
                 // TODO: Define API to handle buffer creation and management...
-                CHECK( createTriangleVertexBuffer() )
+                CHECK( createRectangleBuffers() )
 
                 m_currFrameNum = 0;
                 return true;
@@ -85,7 +85,7 @@ namespace vp {
                         vkDeviceWaitIdle(m_context.getLogicalDevice());
                 }
 
-                destroyTriangleVertexBuffer();
+                destroyRectangleBuffers();
 
                 destroyStagingBuffer(m_stagingBuffer);
                 destroySynchObjects();
@@ -1016,13 +1016,14 @@ namespace vp {
                 vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 
                 // Bind vertex buffer
-                VkBuffer vertexBuffers[] = { m_triangleVertexBuffer.handle };
+                VkBuffer vertexBuffers[] = { m_rectVertexBuffer.handle };
                 VkDeviceSize offsets[] = { 0 };
 
                 vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
+                vkCmdBindIndexBuffer(cmdBuffer, m_rectIndexBuffer.handle, 0, VK_INDEX_TYPE_UINT16);
 
-                // Issue a draw call, params are: vertex count, instance count, first vertex, first instance
-                vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
+                // Issue a draw call, params are: indices count, instance count, offset into the buffer, offset for instancing
+                vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
 
                 vkCmdEndRenderPass(cmdBuffer);
 
@@ -1462,63 +1463,87 @@ namespace vp {
 
 
         /**
-         * @brief Renderer::createTriangleVertexBuffer
-         * Temporary method used to create and populate a vertex buffer necessary to render a colored triangle
+         * @brief Renderer::createRectangleBuffers
+         * Temporary method used to create and populate the vertex and index buffers necessary
+         * to render a colored rectangle
         */
-        bool Renderer::createTriangleVertexBuffer()
+        bool Renderer::createRectangleBuffers()
         {
-                // Check if buffer has already been created
-                if(m_triangleVertexBuffer.handle != VK_NULL_HANDLE)
+                // Check if buffer have already been created
+                if(m_rectVertexBuffer.handle != VK_NULL_HANDLE || m_rectIndexBuffer.handle != VK_NULL_HANDLE)
                 {
-                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed: triangle's vertex buffer has already been created!");
+                        LOG_ERROR("Renderer::createRectangleBuffers() failed: triangle buffers have already been created!");
                         return false;
                 }
 
                 const float vertexData[] = {
                         // position             color
-                        -0.5f, 0.5f, 0.0f,      1.0f, 0.0f, 0.0f,       // Bottom left
-                        0.0f, -0.5f, 0.0f,      0.0f, 1.0f, 0.0f,       // Top
+                        -0.5f, 0.5f, 0.0f,      1.0f, 1.0f, 1.0f,       // Bottom left
+                        -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,       // Top left
+                        0.5f, -0.5f, 0.0f,      0.0f, 1.0f, 0.0f,       // Top right
                         0.5f, 0.5f, 0.0f,       0.0f, 0.0f, 1.0f,       // Bottom right
                 };
 
-                if(m_stagingBuffer.capacity - m_stagingBuffer.size < sizeof(vertexData))
+                const uint16_t indexData[] = {
+                        0, 1, 2,                // Top left triangle
+                        2, 3, 0                 // Bottom right triangle
+                };
+
+                if( (m_stagingBuffer.capacity - m_stagingBuffer.size < sizeof(vertexData))
+                        || (m_stagingBuffer.capacity - m_stagingBuffer.size < sizeof(indexData)) )
                 {
-                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed: space in the staging buffer is not sufficient!");
+                        LOG_ERROR("Renderer::createRectangleBuffers() failed: space in the staging buffer is not sufficient!");
                         return false;
                 }
 
-                constexpr auto USAGE = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                constexpr auto VERTEX_BUFF_USAGE = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                constexpr auto INDEX_BUFF_USAGE = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
                 constexpr auto FLAGS = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
                 // Create vertex buffer (in GPU local memory)
-                if( !createBuffer(m_triangleVertexBuffer, sizeof(vertexData), USAGE, FLAGS) )
+                if( !createBuffer(m_rectVertexBuffer, sizeof(vertexData), VERTEX_BUFF_USAGE, FLAGS)
+                        || !createBuffer(m_rectIndexBuffer, sizeof(indexData), INDEX_BUFF_USAGE, FLAGS) )
                 {
-                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed!");
+                        LOG_ERROR("Renderer::createRectangleBuffers() failed: vertex/index buffer creation failed!");
                         return false;
                 }
 
-                // Copy data into the staging buffer
+                // Copy vertex data into the staging buffer
                 memcpy(m_stagingBuffer.rawPtr, vertexData, sizeof(vertexData));
                 m_stagingBuffer.size = sizeof(vertexData);
 
                 // Transfer data from the staging buffer to the triangle vertex buffer
-                if( !copyBuffer(m_stagingBuffer, m_triangleVertexBuffer) )
+                if( !copyBuffer(m_stagingBuffer, m_rectVertexBuffer) )
                 {
-                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed!");
+                        LOG_ERROR("Renderer::createRectangleBuffers() failed: staging to vertex buffer transfer failed!");
                         return false;
                 }
+
+                // Copy index data into the staging buffer
+                memcpy(m_stagingBuffer.rawPtr, indexData, sizeof(indexData));
+                m_stagingBuffer.size = sizeof(indexData);
+
+                // Transfer data from the staging buffer to the triangle index buffer
+                if( !copyBuffer(m_stagingBuffer, m_rectIndexBuffer) )
+                {
+                        LOG_ERROR("Renderer::createRectangleBuffers() failed: staging to index buffer transfer failed!");
+                        return false;
+                }
+
+                // TODO: Check if index buffer creation is correct and implement the its usage...
 
                 return true;
         }
 
 
         /**
-         * @brief Renderer::destroyTriangleVertexBuffer
-         * Temporary method used to destroy the vertex buffer used to render a colored triangle
+         * @brief Renderer::destroyRectangleBuffers
+         * Temporary method used to destroy the vertex and index buffers used to render a colored rectangle
         */
-        void Renderer::destroyTriangleVertexBuffer()
+        void Renderer::destroyRectangleBuffers()
         {
-                destroyBuffer(m_triangleVertexBuffer);
+                destroyBuffer(m_rectVertexBuffer);
+                destroyBuffer(m_rectIndexBuffer);
         }
 
 }

@@ -130,9 +130,9 @@ namespace vp {
                 void            destroyImage(Image& image);
                 // ==================================================
 
-                // Temporary methods used to render a simple triangle
-                bool            createTriangleVertexBuffer();
-                void            destroyTriangleVertexBuffer();
+                // Temporary methods used to render a simple rectangle
+                bool            createRectangleBuffers();
+                void            destroyRectangleBuffers();
                 // ==================================================
 
                 uint32_t        findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props);
@@ -170,7 +170,8 @@ namespace vp {
 
                 // Temporary data used to render a simple triangle
                 StagingBuffer                   m_stagingBuffer = {};                                   ///< Buffer used to transfer data from CPU to GPU
-                Buffer                          m_triangleVertexBuffer = {};                            ///< Vertex buffer used to store triangle's data
+                Buffer                          m_rectVertexBuffer = {};                                ///< Vertex buffer used to store rectangle's vertices data
+                Buffer                          m_rectIndexBuffer = {};                                 ///< Index buffer used to store rextangle's indices data
                 // ==================================================
         };
 
