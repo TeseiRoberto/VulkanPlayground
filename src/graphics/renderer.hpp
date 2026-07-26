@@ -72,6 +72,18 @@ namespace vp {
                 struct Buffer {
                         VkBuffer                handle = VK_NULL_HANDLE;        ///< Handle to the buffer object
                         VkDeviceMemory          memory = VK_NULL_HANDLE;        ///< Handle to the memory area allocated for the buffer
+                        VkDeviceSize            size = 0;                       ///< Size of the data currently stored into the buffer, expressed in bytes
+                        VkDeviceSize            capacity = 0;                   ///< Capacity of the buffer, expressed in bytes
+                };
+
+
+                /**
+                 * @struct StagingBuffer
+                 * Models a buffer object that is used as temporary storage to upload data from CPU to GPU buffers.
+                 * Such buffer object is associated to a memory area which is host visible (accessible by both CPU and GPU) and host coherent
+                */
+                struct StagingBuffer : Buffer {
+                        void*                   rawPtr = nullptr;               ///< Pointer to the mapped memory area allocated for the staging buffer
                 };
 
 
@@ -93,8 +105,8 @@ namespace vp {
                 bool            createFramebuffers();
                 void            destroyFramebuffers();
 
-                bool            createCommandPool();
-                void            destroyCommandPool();
+                bool            createCommandPools();
+                void            destroyCommandPools();
 
                 bool            createCommandBuffers();
                 bool            recordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
@@ -103,13 +115,20 @@ namespace vp {
                 void            destroySynchObjects();
 
 
-                bool            createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage);
+                // Methods for resources management
+                bool            createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags);
                 void            destroyBuffer(Buffer& buffer);
+
+                bool            createStagingBuffer(StagingBuffer& buffer, VkDeviceSize size);
+                void            destroyStagingBuffer(StagingBuffer& buffer);
+
+                bool            copyBuffer(Buffer& from, Buffer& to);
 
                 bool            createImage(Image& image, uint32_t width, uint32_t height, uint32_t depth, VkImageType type, uint32_t mipLevels,
                                                 VkFormat format, VkImageTiling tilingMode, VkImageUsageFlags usageFlags);
 
                 void            destroyImage(Image& image);
+                // ==================================================
 
                 // Temporary methods used to render a simple triangle
                 bool            createTriangleVertexBuffer();
@@ -141,7 +160,8 @@ namespace vp {
 
                 std::vector<VkFramebuffer>      m_swapchainFramebuffers;                                ///< Framebuffer objects used to bind swapchain images before rendering operations
 
-                VkCommandPool                   m_gfxCommandPool = VK_NULL_HANDLE;                      ///< Pool that manages commands that will be sent by the renderer to the graphics queue
+                VkCommandPool                   m_gfxCommandPool = VK_NULL_HANDLE;                      ///< Pool that manages command buffers used for draw operations 
+                VkCommandPool                   m_transferCommandPool = VK_NULL_HANDLE;                 ///< Pool that manages command buffers used for data transfer operations
                 VkCommandBuffer                 m_gfxCmdBuffers[MAX_FRAMES_IN_FLIGHT];                  ///< Command buffers that will be sent by the renderer to the graphics queue
         
                 VkSemaphore                     m_imageAvailableSemaphores [MAX_FRAMES_IN_FLIGHT];      ///< Semaphores used to signal that an image has been acquired from the swapchain (we are ready to render on it)
@@ -149,8 +169,8 @@ namespace vp {
                 VkFence                         m_renderingFinishedFences[MAX_FRAMES_IN_FLIGHT];        ///< Fences used to signal that rendering is done, a command buffer can be reused
 
                 // Temporary data used to render a simple triangle
-                Buffer                          m_vertexBuffer = {};                                    ///< Vertex buffer used to store triangle's data
-                void*                           m_vertexBufferPtr = nullptr;                            ///< Pointer to the mapped memory area allocated for the vertex buffer
+                StagingBuffer                   m_stagingBuffer = {};                                   ///< Buffer used to transfer data from CPU to GPU
+                Buffer                          m_triangleVertexBuffer = {};                            ///< Vertex buffer used to store triangle's data
                 // ==================================================
         };
 

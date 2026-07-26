@@ -57,9 +57,10 @@ namespace vp {
                 CHECK( createRenderPass() )
                 CHECK( createGraphicsPipeline() )
                 CHECK( createFramebuffers() )
-                CHECK( createCommandPool() )
+                CHECK( createCommandPools() )
                 CHECK( createCommandBuffers() )
                 CHECK( createSynchObjects() )
+                CHECK( createStagingBuffer(m_stagingBuffer, 1024) )
 
                 // TODO: Define API to handle buffer creation and management...
                 CHECK( createTriangleVertexBuffer() )
@@ -86,8 +87,9 @@ namespace vp {
 
                 destroyTriangleVertexBuffer();
 
+                destroyStagingBuffer(m_stagingBuffer);
                 destroySynchObjects();
-                destroyCommandPool();
+                destroyCommandPools();
                 destroyFramebuffers();
                 destroyGraphicsPipeline();
                 destroyRenderPass();
@@ -846,8 +848,8 @@ namespace vp {
 
 
         /**
-         * @brief Renderer::createCommandPool
-         * Creates the command pool that manages command buffer that will be sent
+         * @brief Renderer::createCommandPools
+         * Creates the command pools that manages the command buffers that will be sent
          * by the renderer to the graphics queue.
          * @return True on success, false on failure
          *
@@ -857,8 +859,9 @@ namespace vp {
          * for which the pool has been created (in other words: a command pool is specific to a
          * certain queue family index that is specified at creation time of the pool).
         */
-        bool Renderer::createCommandPool()
+        bool Renderer::createCommandPools()
         {
+                // Create a pool for draw commad buffers
                 VkCommandPoolCreateInfo poolInfo {};
 
                 poolInfo.sType                  = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -871,24 +874,40 @@ namespace vp {
                         return false;
                 }
 
+                // Create a pool for transfer command buffers
+                poolInfo.flags                  = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+
+                if( vkCreateCommandPool(m_context.getLogicalDevice(), &poolInfo, nullptr, &m_transferCommandPool) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::init() failed: cannot create transfer command pool, vkCreateCommandPool() failed!");
+                        return false;
+                }
+
                 return true;
         }
 
 
         /**
-         * @brief Renderer::destroyCommandPool
-         * Destroys the command pool for the graphics queue
+         * @brief Renderer::destroyCommandPools
+         * Destroys the command pools managed by the renderer
         */
-        void Renderer::destroyCommandPool()
+        void Renderer::destroyCommandPools()
         {
-                if(m_gfxCommandPool == VK_NULL_HANDLE)
-                        return;
+                // Destroy command pool for draw command buffers
+                if(m_gfxCommandPool != VK_NULL_HANDLE )
+                {
+                        vkDestroyCommandPool(m_context.getLogicalDevice(), m_gfxCommandPool, nullptr);
+                        m_gfxCommandPool = VK_NULL_HANDLE;
+                
+                        for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+                                m_gfxCmdBuffers[i] = VK_NULL_HANDLE;
+                }
 
-                vkDestroyCommandPool(m_context.getLogicalDevice(), m_gfxCommandPool, nullptr);
-                m_gfxCommandPool = VK_NULL_HANDLE;
-
-                for(uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-                        m_gfxCmdBuffers[i] = VK_NULL_HANDLE;
+                if(m_transferCommandPool != VK_NULL_HANDLE)
+                {
+                        vkDestroyCommandPool(m_context.getLogicalDevice(), m_transferCommandPool, nullptr);
+                        m_transferCommandPool = VK_NULL_HANDLE;
+                }
         }
 
 
@@ -997,7 +1016,7 @@ namespace vp {
                 vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 
                 // Bind vertex buffer
-                VkBuffer vertexBuffers[] = { m_vertexBuffer.handle };
+                VkBuffer vertexBuffers[] = { m_triangleVertexBuffer.handle };
                 VkDeviceSize offsets[] = { 0 };
 
                 vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
@@ -1119,13 +1138,15 @@ namespace vp {
 
         /**
          * @brief Renderer::createBuffer
-         * Creates a VkBuffer with the given parameteres and allocates memory for it
+         * Creates a VkBuffer with the given parameters and allocates memory for it
          * @param buffer Output variable in which data for the created buffer will be stored
          * @param size minimum size that shall be allocated for the buffer, expressed in bytes.
          *      This method will allocate at least size bytes for the buffer.
          * @param usage Purpouse for which the buffer will be used
+         * @param flags Specify memory properties that are requested for the buffer that shall be created
+         * @return True on success, false on failure
         */
-        bool Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage)
+        bool Renderer::createBuffer(Buffer& buffer, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags)
         {
                 VkBufferCreateInfo bufferInfo {};
 
@@ -1149,12 +1170,7 @@ namespace vp {
 
                 memAllocInfo.sType              = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
                 memAllocInfo.allocationSize     = bufferMemRequirements.size;
-                memAllocInfo.memoryTypeIndex    = findMemoryType(
-                                                                bufferMemRequirements.memoryTypeBits,
-                                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                                                        );
-
-                // TODO: For now this method can only allocate buffers that are host visible! This should be fixed!
+                memAllocInfo.memoryTypeIndex    = findMemoryType( bufferMemRequirements.memoryTypeBits, flags );
 
                 // Allocate memory for the buffer
                 if( vkAllocateMemory(m_context.getLogicalDevice(), &memAllocInfo, nullptr, &buffer.memory) != VK_SUCCESS )
@@ -1165,6 +1181,9 @@ namespace vp {
 
                 // Bind memory to the buffer
                 vkBindBufferMemory(m_context.getLogicalDevice(), buffer.handle, buffer.memory, 0);
+
+                buffer.size = 0;
+                buffer.capacity = bufferMemRequirements.size;
 
                 return true;
         }
@@ -1188,6 +1207,143 @@ namespace vp {
                         vkFreeMemory(m_context.getLogicalDevice(), buffer.memory, nullptr);
                         buffer.memory = VK_NULL_HANDLE;
                 }
+
+                buffer.size = 0;
+                buffer.capacity = 0;
+        }
+
+
+        /**
+         * @brief Renderer::createStagingBuffer
+         * Creates a staging buffer with the given parameteres and allocates memory for it
+         * @param buffer Output variable in which data for the created buffer will be stored
+         * @param size minimum size that shall be allocated for the buffer, expressed in bytes.
+         *      This method will allocate at least size bytes for the buffer.
+         * @return True on success, false on failure
+        */
+        bool Renderer::createStagingBuffer(StagingBuffer& buffer, VkDeviceSize size)
+        {
+                constexpr auto USAGE = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+                constexpr auto FLAGS = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+                // Create a host visible and coherent buffer object
+                if( !createBuffer(buffer, size, USAGE, FLAGS) )
+                {
+                        LOG_ERROR("Renderer::createStagingBuffer() failed: buffer creation failed!");
+                        return false;
+                }
+
+                // Map the vertex buffer memory so that CPU can access it
+                if( vkMapMemory(m_context.getLogicalDevice(), buffer.memory, 0, VK_WHOLE_SIZE, 0, &buffer.rawPtr) != VK_SUCCESS )
+                {
+                        destroyBuffer(buffer);
+
+                        LOG_ERROR("Renderer::createStagingBuffer() failed: cannot map memory buffer, vkMapMemory() failed!");
+                        return false;
+                }
+
+                return true;
+        }
+
+
+        /**
+         * @brief Renderer::destroyStagingBuffer
+         * Destroys the given staging buffer and deallocates its memory
+         * @param buffer Buffer to be destroyed
+        */
+        void Renderer::destroyStagingBuffer(StagingBuffer& buffer)
+        {
+                // Unmap the staging buffer memory area
+                if(buffer.rawPtr != nullptr)
+                {
+                        vkUnmapMemory(m_context.getLogicalDevice(), buffer.memory);
+                        buffer.rawPtr = nullptr;
+                }
+
+                destroyBuffer(buffer);
+        }
+
+
+        /**
+         * @brief Renderer::copyBuffer
+         * Copies the content of a buffer into another buffer
+         * @param from Buffer from which content shall be copied
+         * @param to Buffer to which content shall be copied
+         * @return true on success, false otherwise
+        */
+        bool Renderer::copyBuffer(Buffer& from, Buffer& to)
+        {
+                // Ensure that we have two different buffers
+                if(&from == &to)
+                {
+                        LOG_ERROR("Renderer::copyBuffer() failed: detination buffer is equal to the source one!");
+                        return false;
+                }
+
+                if(to.capacity - to.size < from.size)
+                {
+                        LOG_ERROR("Renderer::copyBuffer() failed: there is not enough space in the destination buffer!");
+                        return false;
+                }
+
+                // Allocate a command buffer to record the transfer operation
+                VkCommandBuffer transferCmdBuffer = VK_NULL_HANDLE;
+                VkCommandBufferAllocateInfo allocInfo {};
+
+                allocInfo.sType                 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                allocInfo.level                 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                allocInfo.commandPool           = m_transferCommandPool;
+                allocInfo.commandBufferCount    = 1;
+
+                if( vkAllocateCommandBuffers(m_context.getLogicalDevice(), &allocInfo, &transferCmdBuffer) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::copyBuffer() failed: allocation of command buffer for transfer failed, vkAllocateCommandBuffers() failed!");
+                        return false;
+                }
+
+                // Record transfer commands into the command buffer
+                VkCommandBufferBeginInfo cmdBeginInfo {};
+
+                cmdBeginInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                cmdBeginInfo.flags              = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+                cmdBeginInfo.pInheritanceInfo   = nullptr;
+
+                vkBeginCommandBuffer(transferCmdBuffer, &cmdBeginInfo);
+
+                VkBufferCopy copyRegion {};
+
+                copyRegion.srcOffset    = 0;
+                copyRegion.dstOffset    = 0;
+                copyRegion.size         = from.size;
+
+                vkCmdCopyBuffer(transferCmdBuffer, from.handle, to.handle, 1, &copyRegion);
+
+                // Finish recording of commands into the buffer
+                if( vkEndCommandBuffer(transferCmdBuffer) != VK_SUCCESS )
+                {
+                        LOG_ERROR("renderer::copyBuffer() failed: cannot end command recording, vkEndCommandBuffer() failed!");
+                        return false;
+                }
+
+                // Create a struct to describe how the command shall be submitted to the graphics queue
+                VkSubmitInfo submitInfo {};
+
+                submitInfo.sType                        = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submitInfo.commandBufferCount           = 1;
+                submitInfo.pCommandBuffers              = &transferCmdBuffer;
+
+                // Submit command buffer to queue
+                if( vkQueueSubmit(m_context.getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS )
+                {
+                        LOG_ERROR("Renderer::copyBuffer() failed: failed to submit command buffer to queue, vkQueueSubmit() failed!");
+                        return false;
+                }
+
+                // Waitfor the queue to complete the transfer and deallocate the command buffer
+                vkQueueWaitIdle(m_context.getGraphicsQueue());
+                vkFreeCommandBuffers(m_context.getLogicalDevice(), m_transferCommandPool, 1, &transferCmdBuffer);
+
+                return true;
         }
 
 
@@ -1311,9 +1467,12 @@ namespace vp {
         */
         bool Renderer::createTriangleVertexBuffer()
         {
-                // Check if buffer has already been allocated and mapped
-                if(m_vertexBufferPtr != nullptr)
-                        return true;
+                // Check if buffer has already been created
+                if(m_triangleVertexBuffer.handle != VK_NULL_HANDLE)
+                {
+                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed: triangle's vertex buffer has already been created!");
+                        return false;
+                }
 
                 const float vertexData[] = {
                         // position             color
@@ -1322,22 +1481,32 @@ namespace vp {
                         0.5f, 0.5f, 0.0f,       0.0f, 0.0f, 1.0f,       // Bottom right
                 };
 
-                // Create the vertex buffer
-                if( !createBuffer(m_vertexBuffer, sizeof(vertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) )
+                if(m_stagingBuffer.capacity - m_stagingBuffer.size < sizeof(vertexData))
                 {
-                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed, creation of vertex buffer object failed!");
+                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed: space in the staging buffer is not sufficient!");
                         return false;
                 }
 
-                // Map the vertex buffer memory so that CPU can access it
-                if( vkMapMemory(m_context.getLogicalDevice(), m_vertexBuffer.memory, 0, VK_WHOLE_SIZE, 0, &m_vertexBufferPtr) != VK_SUCCESS )
+                constexpr auto USAGE = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                constexpr auto FLAGS = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+                // Create vertex buffer (in GPU local memory)
+                if( !createBuffer(m_triangleVertexBuffer, sizeof(vertexData), USAGE, FLAGS) )
                 {
-                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed, creation of vertex buffer object failed!");
+                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed!");
                         return false;
                 }
 
-                // Copy data into the vertex buffer
-                memcpy(m_vertexBufferPtr, vertexData, sizeof(vertexData));
+                // Copy data into the staging buffer
+                memcpy(m_stagingBuffer.rawPtr, vertexData, sizeof(vertexData));
+                m_stagingBuffer.size = sizeof(vertexData);
+
+                // Transfer data from the staging buffer to the triangle vertex buffer
+                if( !copyBuffer(m_stagingBuffer, m_triangleVertexBuffer) )
+                {
+                        LOG_ERROR("Renderer::createTriangleVertexBuffer() failed!");
+                        return false;
+                }
 
                 return true;
         }
@@ -1349,14 +1518,7 @@ namespace vp {
         */
         void Renderer::destroyTriangleVertexBuffer()
         {
-                // Unmap the vertex buffer memory area
-                if(m_vertexBuffer. handle != VK_NULL_HANDLE && m_vertexBuffer.memory != VK_NULL_HANDLE)
-                {
-                        vkUnmapMemory(m_context.getLogicalDevice(), m_vertexBuffer.memory);
-                        m_vertexBufferPtr = nullptr;
-                }
-
-                destroyBuffer(m_vertexBuffer);
+                destroyBuffer(m_triangleVertexBuffer);
         }
 
 }
