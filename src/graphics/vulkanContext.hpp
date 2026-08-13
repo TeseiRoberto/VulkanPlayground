@@ -1,7 +1,7 @@
 
 /**
  * @file vulkanContext.hpp
- * Defines the vp::VulkanContext class
+ * Declares the vp::VulkanContext class
 */
 
 #ifndef VP_VULKAN_CONTEXT_H

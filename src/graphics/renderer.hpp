@@ -1,7 +1,7 @@
 
 /**
  * @file renderer.hpp
- * Defines the vp::Renderer class
+ * Declares the vp::Renderer class
 */
 
 #ifndef VP_RENDERER_H
@@ -13,7 +13,8 @@
 #include <GLFW/glfw3.h>
 
 #include "vulkanContext.hpp"
-#include "vulkanShader.hpp"
+#include "shader/vulkanShader.hpp"
+#include "pipeline/graphicsPipelineBuilder.hpp"
 #include "log.hpp"
 
 namespace vp {
@@ -155,8 +156,7 @@ namespace vp {
                 VkImageView                     m_depthAttachmentView = VK_NULL_HANDLE;                 ///< View used for the deph attachment image
 
                 VkRenderPass                    m_renderPass = VK_NULL_HANDLE;                          ///< The main render pass used by the renderer
-                VkPipelineLayout                m_pipelineLayout = VK_NULL_HANDLE;                      ///< Describes the resources used by the renderer's graphics pipeline
-                VkPipeline                      m_pipeline = VK_NULL_HANDLE;                            ///< Handle to the graphics pipeline used by the renderer to draw graphics
+                VulkanGraphicsPipeline          m_pipeline;                                             ///< Graphics pipeline used by the renderer
 
                 std::vector<VkFramebuffer>      m_swapchainFramebuffers;                                ///< Framebuffer objects used to bind swapchain images before rendering operations
 

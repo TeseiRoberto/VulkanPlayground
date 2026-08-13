@@ -13,14 +13,19 @@ set(TARGET_NAME vulkanPlayground)
 set(SRCS
         src/main.cpp
 
+        src/graphics/commonEnums.hpp
+        src/graphics/commonEnums.cpp
         src/graphics/vulkanContext.hpp
         src/graphics/vulkanContext.cpp
-        src/graphics/vulkanShader.hpp
-        src/graphics/vulkanShader.cpp
+        src/graphics/shader/vulkanShader.hpp
+        src/graphics/shader/vulkanShader.cpp
+        src/graphics/pipeline/graphicsPipelineBuilder.hpp
+        src/graphics/pipeline/graphicsPipelineBuilder.cpp
+
         src/graphics/renderer.hpp
         src/graphics/renderer.cpp
 )
 
 add_executable(${TARGET_NAME} ${SRCS})
-target_include_directories(${TARGET_NAME} PRIVATE src ${Vulkan_INCLUDE_DIR})
+target_include_directories(${TARGET_NAME} PRIVATE src src/graphics ${Vulkan_INCLUDE_DIR} )
 target_link_libraries(${TARGET_NAME} glfw ${Vulkan_LIBRARIES})

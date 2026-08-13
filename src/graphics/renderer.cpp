@@ -551,215 +551,39 @@ namespace vp {
         */
         bool Renderer::createGraphicsPipeline()
         {
-                // TODO: Implement a public API to manage the configuration of graphics pipeline stages and shaders
-
-                VulkanShader vertShader(&m_context);
+                VulkanShader vrtxShader(&m_context);
                 VulkanShader fragShader(&m_context);
 
-                vertShader.loadFromBinary("../resources/shaders/bin/vertexShader.spv", VulkanShader::Type::VERTEX);
-                fragShader.loadFromBinary("../resources/shaders/bin/fragmentShader.spv", VulkanShader::Type::FRAGMENT);
+                // Load vertex and fragment shaders
+                vrtxShader.loadFromBinary("../resources/shaders/bin/vertexShader.spv", ShaderType::VERTEX_SHADER);
+                fragShader.loadFromBinary("../resources/shaders/bin/fragmentShader.spv", ShaderType::FRAGMENT_SHADER);
 
-                if( !vertShader.isValid() || !fragShader.isValid() )
+                if( !vrtxShader.isValid() || !fragShader.isValid() )
                 {
                         LOG_ERROR("Renderer::init() failed: failed to create graphics pipeline, vertex/fragment shader loading failed!");
                         return false;
                 }
 
-                // Create structs to specify the programmable stages of the pipeline
-                VkPipelineShaderStageCreateInfo shaderStagesInfo[2] = {};
+                // Describe vertex shader's input attributes and bindings
+                vrtxShader.describeVertexBinding(0, VertexInputRate::PER_VERTEX, 6 * sizeof(float));            // We use only 1 interleaved vertex buffer 
+                vrtxShader.describeVertexAttribute(0, 0, VertexAttributeType::VEC3_FLOAT, 0);                   // Vertex position, 3 floats
+                vrtxShader.describeVertexAttribute(0, 1, VertexAttributeType::VEC3_FLOAT, 3 * sizeof(float));   // Vertex color, 3 floats
 
-                shaderStagesInfo[0].sType       = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                shaderStagesInfo[0].stage       = VK_SHADER_STAGE_VERTEX_BIT;
-                shaderStagesInfo[0].module      = vertShader.getModule();
-                shaderStagesInfo[0].pName       = "main";
+                GraphicsPipelineBuilder pipelineBuilder;
 
-                shaderStagesInfo[1].sType       = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                shaderStagesInfo[1].stage       = VK_SHADER_STAGE_FRAGMENT_BIT;
-                shaderStagesInfo[1].module      = fragShader.getModule();
-                shaderStagesInfo[1].pName       = "main";
+                // Set pipeline properties
+                pipelineBuilder
+                        .setInputAssembly(PrimitiveTopologyType::TRIANGLE_LIST)
+                        .setViewport(0, 0, m_swapchainProps.extent.width, m_swapchainProps.extent.height)
+                        .setVertexShader(vrtxShader)
+                        .setRasterizer(false, TriangleFrontFace::FRONT_FACE_CLOCKWISE, CullMode::CULL_BACK_FACE)
+                        .setFragmentShader(fragShader)
+                        .setDepthTest(CompareOperatorType::LESS_THAN);
 
-                // ====================[ Vertex input description (fixed function stage) ]====================
-                // The scope of this section is to describe to Vulkan the format of the vertices that will be passed as input to the pipeline
-                // First we define a vertex binding point (vertex buffers will be bound to those "binding points")
-                VkVertexInputBindingDescription vrtxBindingInfo {};
-
-                vrtxBindingInfo.binding         = 0;
-                vrtxBindingInfo.stride          = sizeof(float) * 6;            // 3 float for positiona and 3 for color
-                vrtxBindingInfo.inputRate       = VK_VERTEX_INPUT_RATE_VERTEX;
-
-                // Secondly, we describe the format of each attributes of a single vertex and how those are laid out in memory
-                VkVertexInputAttributeDescription vrtxAttribsInfo[2];
-
-                vrtxAttribsInfo[0].binding       = 0;
-                vrtxAttribsInfo[0].location      = 0;                           // Position attribute of the vertex
-                vrtxAttribsInfo[0].format        = VK_FORMAT_R32G32B32_SFLOAT;
-                vrtxAttribsInfo[0].offset        = 0;
-
-                vrtxAttribsInfo[1].binding       = 0;
-                vrtxAttribsInfo[1].location      = 1;                           // Color attribute of the vertex
-                vrtxAttribsInfo[1].format        = VK_FORMAT_R32G32B32_SFLOAT;
-                vrtxAttribsInfo[1].offset        = sizeof(float) * 3;
-
-                // Now we can combine binding point description and attributes descriptions
-                // This struct describes how vertices are passed as input to the vertex shader, this is similar to glVertexAttribPointer() call in OpenGL API
-                VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
-
-                vertexInputInfo.sType                                   = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-                vertexInputInfo.vertexBindingDescriptionCount           = 1;
-                vertexInputInfo.pVertexBindingDescriptions              = &vrtxBindingInfo;
-                vertexInputInfo.vertexAttributeDescriptionCount         = 2;
-                vertexInputInfo.pVertexAttributeDescriptions            = vrtxAttribsInfo;
-
-                // ====================[ Input assembly stage (fixed function stage) ]====================
-                // This stage describes how vertices are grouped toghether to create primitives
-                VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo {};
-
-                inputAssemblyInfo.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-                inputAssemblyInfo.topology                              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-                inputAssemblyInfo.primitiveRestartEnable                = VK_FALSE;
-                
-                // ====================[ Viewport and scissor region description (fixed function stage) ]====================
-                // The viewport struct describes the dimensions of the viewport (the viewport defines how a rendered image is mapped onto the framebuffer).
-                // The Scissor struct instead describes the region of the framebuffer to which pixels can be written
-                VkViewport viewport {};
-
-                viewport.x              = 0.0f;
-                viewport.y              = 0.0f;
-                viewport.width          = static_cast<float>( m_swapchainProps.extent.width );
-                viewport.height         = static_cast<float>( m_swapchainProps.extent.height );
-                viewport.minDepth       = 0.0f;
-                viewport.maxDepth       = 1.0f;
-                
-                VkRect2D scissor {};
-
-                scissor.offset          = { 0, 0 };
-                scissor.extent          = m_swapchainProps.extent;
-                
-                VkPipelineViewportStateCreateInfo viewportInfo {};
-
-                viewportInfo.sType              = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-                viewportInfo.viewportCount      = 1;
-                viewportInfo.pViewports         = &viewport;
-                viewportInfo.scissorCount       = 1;
-                viewportInfo.pScissors          = &scissor;
-
-                // ====================[ Rasterizer stage (fixed function stage) ]====================
-                // This stage describes:
-                //      - how the primitive shapes produced by the GPU shall be rasterized (transformed into fragments)
-                //      - how depth test shall be performed on the produced fragments
-                //      - if, and how, face culling shall be performed
-                //      - how scissor test shall be performed
-                
-                VkPipelineRasterizationStateCreateInfo rasterizerInfo {};
-
-                rasterizerInfo.sType                            = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-                rasterizerInfo.depthClampEnable                 = VK_FALSE;
-                rasterizerInfo.rasterizerDiscardEnable          = VK_FALSE;
-                rasterizerInfo.polygonMode                      = VK_POLYGON_MODE_FILL;
-                rasterizerInfo.cullMode                         = VK_CULL_MODE_BACK_BIT;
-                rasterizerInfo.frontFace                        = VK_FRONT_FACE_CLOCKWISE;
-                rasterizerInfo.depthBiasEnable                  = VK_FALSE;
-                rasterizerInfo.lineWidth                        = 1.0f;
-
-                // ====================[ Multisampling state description (fixed function stage) ]====================
-                // This struct describes if multisampling is enabled and how it shall be performed
-                VkPipelineMultisampleStateCreateInfo multisamplingInfo {};
-
-                multisamplingInfo.sType                         = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-                multisamplingInfo.sampleShadingEnable           = VK_FALSE;
-                multisamplingInfo.rasterizationSamples          = VK_SAMPLE_COUNT_1_BIT;
-                multisamplingInfo.minSampleShading              = 1.0f;
-                multisamplingInfo.pSampleMask                   = nullptr;
-                multisamplingInfo.alphaToCoverageEnable         = VK_FALSE;
-                multisamplingInfo.alphaToOneEnable              = VK_FALSE;
-
-                // ====================[ Depth/stencil test description (fixed function stage) ]====================
-                // This struct describes if depth/stencil test is enabled and how it shall be performed
-                VkPipelineDepthStencilStateCreateInfo depthStencilTestInfo {};
-                
-                depthStencilTestInfo.sType                      = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-                depthStencilTestInfo.depthTestEnable            = VK_TRUE;
-                depthStencilTestInfo.depthWriteEnable           = VK_TRUE;
-                depthStencilTestInfo.depthCompareOp             = VK_COMPARE_OP_LESS_OR_EQUAL;
-                
-                // ====================[ Color blending stage description (fixed function stage) ]====================
-                // This stage describes how color blending (blend between the color returned from the fragment shader and the color 
-                // stored in the framebuffer for a specific pixel) shall be performed
-                
-                // This struct describes how color blending should be performed on a specific framebuffer attachment (you may have multiple framebuffers)
-                VkPipelineColorBlendAttachmentState colorBlendAttachment {};
-
-                colorBlendAttachment.colorWriteMask             = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-                colorBlendAttachment.blendEnable                = VK_FALSE;
-                colorBlendAttachment.srcColorBlendFactor        = VK_BLEND_FACTOR_ONE;
-                colorBlendAttachment.dstColorBlendFactor        = VK_BLEND_FACTOR_ZERO;
-                colorBlendAttachment.colorBlendOp               = VK_BLEND_OP_ADD;
-                colorBlendAttachment.srcAlphaBlendFactor        = VK_BLEND_FACTOR_ONE;
-                colorBlendAttachment.dstAlphaBlendFactor        = VK_BLEND_FACTOR_ZERO;
-                colorBlendAttachment.alphaBlendOp               = VK_BLEND_OP_ADD;
-
-                // This struct describes all framebuffers on which the GPU shall execute color blendingn and how (for each of them)
-                VkPipelineColorBlendStateCreateInfo colorBlendingInfo {};
-
-                colorBlendingInfo.sType                         = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-                colorBlendingInfo.logicOpEnable                 = VK_FALSE;
-                colorBlendingInfo.logicOp                       = VK_LOGIC_OP_COPY;
-                colorBlendingInfo.attachmentCount               = 1;
-                colorBlendingInfo.pAttachments                  = &colorBlendAttachment;
-                
-                // ====================[ Dynamic state description ]====================
-                // This struct describes the portions of the pipeline state that can be changed dynamically (without recreating the entire pipeline, before a draw call is issued).
-                // This is a Vulkan specific thing, it does not map to a specific graphics pipeline stage (conceptually)
-                VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH };
-
-                VkPipelineDynamicStateCreateInfo dynamicStateInfo {};
-
-                dynamicStateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-                dynamicStateInfo.dynamicStateCount      = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
-                dynamicStateInfo.pDynamicStates         = dynamicStates;
-
-                // ====================[ Pipeline layout definition ]====================
-                // The VkPipelineLayout object describes the resources that will be accessed by the programmable stages of a graphics pipeline.
-                // Such resources are described using "descriptor set layout" structs
-                VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
-
-                pipelineLayoutInfo.sType                        = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-                pipelineLayoutInfo.setLayoutCount               = 0;
-                pipelineLayoutInfo.pSetLayouts                  = nullptr;
-                pipelineLayoutInfo.pushConstantRangeCount       = 0;
-                pipelineLayoutInfo.pPushConstantRanges          = nullptr;
-
-                if( vkCreatePipelineLayout(m_context.getLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS )
+                // Try to build the graphics pipeline
+                if( !pipelineBuilder.createPipeline(m_context, m_pipeline, m_renderPass) )
                 {
-                        LOG_ERROR("renderer::init() failed: cannot create pipeline layout, vkCreatePipelineLayout() failed!");
-                        return false;
-                }
-
-                // ====================[ Pipeline creation ]====================
-                // Now that we have defined all the programmable and fixed stages of the pipeline and
-                // theire properties we can finally create the graphics pipeline
-                VkGraphicsPipelineCreateInfo pipelineInfo {};
-
-                pipelineInfo.sType                      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-                pipelineInfo.stageCount                 = 2;
-                pipelineInfo.pStages                    = shaderStagesInfo;
-                pipelineInfo.pVertexInputState          = &vertexInputInfo;
-                pipelineInfo.pInputAssemblyState        = &inputAssemblyInfo;
-                pipelineInfo.pViewportState             = &viewportInfo;
-                pipelineInfo.pRasterizationState        = &rasterizerInfo;
-                pipelineInfo.pMultisampleState          = &multisamplingInfo;
-                pipelineInfo.pDepthStencilState         = &depthStencilTestInfo; 
-                pipelineInfo.pColorBlendState           = &colorBlendingInfo;
-                pipelineInfo.pDynamicState              = &dynamicStateInfo;
-                pipelineInfo.layout                     = m_pipelineLayout;
-                pipelineInfo.renderPass                 = m_renderPass;
-                pipelineInfo.subpass                    = 0;
-                pipelineInfo.basePipelineHandle         = VK_NULL_HANDLE;
-                pipelineInfo.basePipelineIndex          = -1;
-                
-                if( vkCreateGraphicsPipelines(m_context.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS )
-                {
-                        LOG_ERROR("renderer::init() failed: cannot create pipeline, vkCreateGraphicsPipeline() failed!");
+                        LOG_ERROR("Renderer::init() failed: failed to create graphics pipeline!");
                         return false;
                 }
 
@@ -773,17 +597,7 @@ namespace vp {
         */
         void Renderer::destroyGraphicsPipeline()
         {
-                if(m_pipeline!= VK_NULL_HANDLE)
-                {
-                        vkDestroyPipeline(m_context.getLogicalDevice(), m_pipeline, nullptr);
-                        m_pipeline = VK_NULL_HANDLE;
-                }
-
-                if(m_pipelineLayout != VK_NULL_HANDLE)
-                {
-                        vkDestroyPipelineLayout(m_context.getLogicalDevice(), m_pipelineLayout, nullptr);
-                        m_pipelineLayout = VK_NULL_HANDLE;
-                }
+                GraphicsPipelineBuilder::destroyPipeline(m_context, m_pipeline);
         }
 
 
@@ -1011,7 +825,7 @@ namespace vp {
                 // Let's record commands into the buffer
                 vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-                vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+                vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.handle);
 
                 vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 
