@@ -157,20 +157,20 @@ namespace vp {
         {
                 if(renderPass == VK_NULL_HANDLE)
                 {
-                        LOG_ERROR("GraphicsPipelineBuilder::build() failed: an invalid render pass is given!");
+                        LOG_ERROR("GraphicsPipelineBuilder::createPipeline() failed: an invalid render pass is given!");
                         return false;
                 }
 
                 if(pipeline.handle != VK_NULL_HANDLE || pipeline.layoutHandle != VK_NULL_HANDLE)
                 {
-                        LOG_ERROR("GraphicsPipelineBuilder::build() failed: given output variable for the pipeline is already set!");
+                        LOG_ERROR("GraphicsPipelineBuilder::createPipeline() failed: given output variable for the pipeline is already set!");
                         return false;
                 }
 
                 // Check that the viewport is set
                 if( !m_isViewportSet )
                 {
-                        LOG_ERROR("GraphicsPipelineBuilder::build() failed: vieport is not set!");
+                        LOG_ERROR("GraphicsPipelineBuilder::createPipeline() failed: vieport is not set!");
                         return false;
                 }
 
@@ -180,7 +180,7 @@ namespace vp {
                 // Check that vertex and fragment shaders are set
                 if(vrtxShaderIt == m_shaderStagesInfo.end() || fragShaderIt == m_shaderStagesInfo.end())
                 {
-                        LOG_ERROR("GraphicsPipelineBuilder::build() failed: vertex/fragment shader is not set!");
+                        LOG_ERROR("GraphicsPipelineBuilder::createPipeline() failed: vertex/fragment shader is not set!");
                         return false;
                 }
 
@@ -243,7 +243,7 @@ namespace vp {
 
                 if( vkCreatePipelineLayout(context.getLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipeline.layoutHandle) != VK_SUCCESS )
                 {
-                        LOG_ERROR("GraphicsPipelineBuilder::build() failed: cannot create pipeline layout, vkCreatePipelineLayout() failed!");
+                        LOG_ERROR("GraphicsPipelineBuilder::createPipeline() failed: cannot create pipeline layout, vkCreatePipelineLayout() failed!");
                         return false;
                 }
 
@@ -270,7 +270,7 @@ namespace vp {
                 
                 if( vkCreateGraphicsPipelines(context.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle) != VK_SUCCESS )
                 {
-                        LOG_ERROR("GraphicsPipelineBuilder::build() failed: cannot create pipeline, vkCreateGraphicsPipeline() failed!");
+                        LOG_ERROR("GraphicsPipelineBuilder::createPipeline() failed: cannot create pipeline, vkCreateGraphicsPipeline() failed!");
 
                         destroyPipeline(context, pipeline);
                         return false;
