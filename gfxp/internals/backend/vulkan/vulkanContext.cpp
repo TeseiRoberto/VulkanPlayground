@@ -1,12 +1,12 @@
 
 /**
  * @file vulkanContext.cpp
- * Implements the vp::VulkanContext class
+ * Implements the gfxp::backend::VulkanContext class
 */
 
 #include "vulkanContext.hpp"
 
-namespace vp {
+namespace gfxp::backend {
 
 
         /**
@@ -363,5 +363,4 @@ namespace vp {
                 return true;
         }
 
-}
-
+} // namespace gfxp::backend

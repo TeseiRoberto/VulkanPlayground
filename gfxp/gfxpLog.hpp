@@ -1,8 +1,11 @@
 
-// Contains definitions of macros for console output messages
+/**
+ * @file gfxpLog.hpp
+ * Contains definitions of macros for console output messages
+*/
 
-#ifndef LOGGING_H
-#define LOGGING_H
+#ifndef GFXP_LOG_H
+#define GFXP_LOG_H
 
 #include <stdio.h>
 
@@ -15,4 +18,4 @@
 #define LOG_WARN(msg, ...)       fprintf(stderr, YELLOW_TEXT_COLOR "[ WARNING ] " msg WHITE_TEXT_COLOR "\n", ##__VA_ARGS__);
 #define LOG_ERROR(msg, ...)      fprintf(stderr, RED_TEXT_COLOR "[ ERROR ] " msg WHITE_TEXT_COLOR "\n", ##__VA_ARGS__);
 
-#endif // LOGGING_H
+#endif // GFXP_LOG_H

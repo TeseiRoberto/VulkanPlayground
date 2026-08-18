@@ -1,11 +1,11 @@
 
 /**
  * @file vulkanContext.hpp
- * Declares the vp::VulkanContext class
+ * Declares the gfxp::backend::VulkanContext class
 */
 
-#ifndef VP_VULKAN_CONTEXT_H
-#define VP_VULKAN_CONTEXT_H
+#ifndef GFXP_BACKEND_VULKAN_CONTEXT_H
+#define GFXP_BACKEND_VULKAN_CONTEXT_H
 
 #include <cstdint>
 #include <cstring>
@@ -15,7 +15,7 @@
 
 #include "log.hpp"
 
-namespace vp {
+namespace gfxp::backend {
 
 
         /**
@@ -76,6 +76,6 @@ namespace vp {
                 static const std::vector<const char*>   REQUIRED_VALIDATION_LAYERS;     ///< Validation layers required by the renderer
         };
 
-}
+} // namespace gfxp::backend
 
-#endif // VP_VULKAN_CONTEXT_H
+#endif // GFXP_BACKEND_VULKAN_CONTEXT_H

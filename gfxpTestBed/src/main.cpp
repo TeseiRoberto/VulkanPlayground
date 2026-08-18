@@ -5,8 +5,10 @@
 */
 
 
+#include "gfxp/gfxpLog.hpp"
+#include "gfxp/iGraphicContext.hpp"
 #include "graphics/renderer.hpp"
-#include "log.hpp"
+
 #include <GLFW/glfw3.h>
 
 int main()
@@ -29,15 +31,26 @@ int main()
 
         glfwShowWindow(wnd);
 
-        // Create renderer
-        vp::Renderer renderer;
-        if( !renderer.init(wnd) )
+        // Create graphic context
+        std::unique_ptr<gfxp::IGraphicContext> gfxContext = gfxp::IGraphicContext::create(gfxp::GraphicApi::VULKAN);
+        if( !gfxContext->init() )
         {
                 glfwDestroyWindow(wnd);
                 glfwTerminate();
                 return -1;
         }
 
+        // Create renderer
+        vp::Renderer renderer(gfxContext);
+        if( !renderer.init(wnd) )
+        {
+                gfxContext->terminate();
+                glfwDestroyWindow(wnd);
+                glfwTerminate();
+                return -1;
+        }
+
+        // Application main loop
         while( !glfwWindowShouldClose(wnd) )
         {
                 renderer.drawFrame();
@@ -46,8 +59,11 @@ int main()
                 glfwPollEvents();
         }
 
+        // Clean up
         renderer.terminate();
+        gfxContext->terminate();
         glfwDestroyWindow(wnd);
         glfwTerminate();
+
         return 0;
 }

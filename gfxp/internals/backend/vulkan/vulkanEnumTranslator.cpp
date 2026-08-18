@@ -1,23 +1,23 @@
 
 /**
- * @file commonEnums.cpp
- * Implements the EnumsTranslator class
+ * @file vulkanEnumTranslator.cpp
+ * Implements the gfxp::backend::EnumsTranslator class
 */
 
-#include "commonEnums.hpp"
+#include "vulkanEnumTranslator.hpp"
 
-namespace vp {
+namespace gfxp::backend {
 
 
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given ShaderType to a vulkan VkShaderStageFlagBits value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const ShaderType from, VkShaderStageFlagBits& to)
+        bool VulkanEnumTranslator::translate(const ShaderType from, VkShaderStageFlagBits& to)
         {
                 switch(from)
                 {
@@ -32,13 +32,13 @@ namespace vp {
 
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given VertexAttributeType to a vulkan VkFormat value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const VertexAttributeType from, VkFormat& to)
+        bool VulkanEnumTranslator::translate(const VertexAttributeType from, VkFormat& to)
         {
                 switch(from)
                 {
@@ -96,14 +96,14 @@ namespace vp {
 
 
         /*!
-         * @brief EnumTranslator::translateToSize
+         * @brief VulkanEnumTranslator::translateToSize
          * Translate the given VertexAttributeType to the size, expressed in bytes, necessary
          * to store a value of such type
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translateToSize(const VertexAttributeType from, size_t& to)
+        bool VulkanEnumTranslator::translateToSize(const VertexAttributeType from, size_t& to)
         {
                 switch(from)
                 {
@@ -161,13 +161,13 @@ namespace vp {
 
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given VertexInputRate to a vulkan VkVertexInputRate value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const VertexInputRate from, VkVertexInputRate& to)
+        bool VulkanEnumTranslator::translate(const VertexInputRate from, VkVertexInputRate& to)
         {
                 switch(from)
                 {
@@ -181,13 +181,13 @@ namespace vp {
         }
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given PrimitiveTopologyTye to a vulkan VkPrimitiveTopology value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const PrimitiveTopologyType from, VkPrimitiveTopology& to)
+        bool VulkanEnumTranslator::translate(const PrimitiveTopologyType from, VkPrimitiveTopology& to)
         {
                 switch(from)
                 {
@@ -206,13 +206,13 @@ namespace vp {
 
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given CullMode to a vulkan VkCullModeFlagBits value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const CullMode from, VkCullModeFlagBits& to)
+        bool VulkanEnumTranslator::translate(const CullMode from, VkCullModeFlagBits& to)
         {
                 switch(from)
                 {
@@ -229,13 +229,13 @@ namespace vp {
 
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given TriangleFrontFace to a vulkan VkFrontFace value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const TriangleFrontFace from, VkFrontFace& to)
+        bool VulkanEnumTranslator::translate(const TriangleFrontFace from, VkFrontFace& to)
         {
                 switch(from)
                 {
@@ -250,13 +250,13 @@ namespace vp {
 
 
         /*!
-         * @brief EnumTranslator::translate
+         * @brief VulkanEnumTranslator::translate
          * Translate the given ShaderType to a vulkan VkShaderStage value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool EnumTranslator::translate(const CompareOperatorType from, VkCompareOp& to)
+        bool VulkanEnumTranslator::translate(const CompareOperatorType from, VkCompareOp& to)
         {
                 switch(from)
                 {
@@ -276,5 +276,5 @@ namespace vp {
         }
 
 
-}
+} // namespace gfxp::backend
 

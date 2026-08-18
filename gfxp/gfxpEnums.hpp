@@ -1,16 +1,35 @@
 
 /**
- * @file commonEnums.hpp
- * Declares common enum types used all around "vulkan playground" code and the EnumTranslator class
+ * @file gfxpEnums.hpp
+ * Declares common enum types used all around gfxp code
 */
 
-#ifndef VP_COMMON_ENUMS
-#define VP_COMMON_ENUMS
+#ifndef GFXP_ENUMS_H
+#define GFXP_ENUMS_H
 
 #include <cstdint>
-#include <vulkan/vulkan.h>
 
-namespace vp {
+namespace gfxp {
+
+
+        /**
+         * @enum GraphicsApi
+         * Enumerates the graphics API backends supported by gfxp
+        */
+        enum class GraphicsApi : uint8_t {
+                VULKAN = 0                      ///< Vulkan API backend
+        };
+
+
+        /**
+         * @enum BufferType
+         * Enumerates the types of buffers supported by gfxp
+        */
+        enum class BufferType : uint8_t {
+                STAGING_BUFFER = 0,             ///< Buffer as temporary storing location for CPU to GPU data transfer 
+                VERTEX_BUFFER,                  ///< GPU local buffer used to store vertex data
+                INDEX_BUFFER,                   ///< GPU local buffer used to store index data
+        };
 
 
         /**
@@ -140,28 +159,7 @@ namespace vp {
         };
 
 
-        /*!
-         * @class EnumTranslator
-         * Utility class used to translate API agnostic enum types to vulkan ones
-        */
-        class EnumTranslator {
-        public:
-                // Disable instance creation
-                                EnumTranslator() = delete;
-                                ~EnumTranslator() = default;
 
-                static bool     translate(const ShaderType from, VkShaderStageFlagBits& to);
-                static bool     translateToSize(const VertexAttributeType from, size_t& to);
+} // namespace gfxp
 
-                static bool     translate(const VertexAttributeType from, VkFormat& to);
-                static bool     translate(const VertexInputRate from, VkVertexInputRate& to);
-                static bool     translate(const PrimitiveTopologyType from, VkPrimitiveTopology& to);
-                static bool     translate(const CullMode from, VkCullModeFlagBits& to);
-                static bool     translate(const TriangleFrontFace from, VkFrontFace& to);
-                static bool     translate(const CompareOperatorType from, VkCompareOp& to);
-
-        };
-
-}
-
-#endif // VP_COMMON_ENUMS
+#endif // GFXP_ENUMS_H

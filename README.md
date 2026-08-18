@@ -1,14 +1,17 @@
-# Vulkan Playground
+# Graphics Playground (GfxP)
 
-My attempt at writing a Vulkan renderer.
+My attempt at writing a graphics rendering library with support for multiple 
+graphics API backends (only Vulkan right now).
 
-To develop the project I followed some tutorials such as:
-* https://vulkan-tutorial.com/
-* https://www.howtovulkan.com/
+This project serves for me as a playground to experiment with the desing
+of a graphics library, renderer architectures, and to learn the Vulkan API.
 
-Aside from tutorials, I used my knowledge and I experimented the desing
-of a renderer architecture to try to develop a flexible renderering API
-based on Vulkan.
+
+## Project structure
+The project is divided into two components:
+- gfxp (Graphics Playground): an API agnostic graphics library
+- gfxpTestBed: simple executable program which implements a render based on gfxp library
+
 
 ## Dependencies
 The project has the following dependencies:
@@ -16,3 +19,8 @@ The project has the following dependencies:
 
 ## How to build
 The project uses CMake as a build system
+
+## Notes
+To develop the gfxp Vulkan backend I followed some tutorials such as:
+* https://vulkan-tutorial.com/
+* https://www.howtovulkan.com/
