@@ -46,5 +46,5 @@ set(SRCS
 )
 
 add_library(${TARGET_NAME} ${SRCS})
-target_include_directories(${TARGET_NAME} PRIVATE ${Vulkan_INCLUDE_DIR} )
+target_include_directories(${TARGET_NAME} PRIVATE . ${Vulkan_INCLUDE_DIR} )
 target_link_libraries(${TARGET_NAME} ${Vulkan_LIBRARIES})

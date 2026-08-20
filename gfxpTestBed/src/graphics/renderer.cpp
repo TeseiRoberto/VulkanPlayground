@@ -90,13 +90,54 @@ bool Renderer::createGraphicsPipeline()
                 return true;
         }
 
-        m_gfxPipeline = m_context->createGraphicsPipeline();
-        if(m_gfxPipeline == GFXP_INVALID_HANDLE)
+        // Describe the vertex and the fragment shader
+        gfxp::ShaderDescription vrtxShaderDesc;
+        gfxp::ShaderDescription fragShaderDesc;
+
+        vrtxShaderDesc
+                .setSourceFile("../../gfxpTestBed/resources/shaders/bin/vertexShader.spv", true, ShaderType::VERTEX_SHADER)
+                .describeVertexBinding(0, gfxp::VertexInputRate::PER_VERTEX, sizeof(float) * 6)         // We only use 1 vertex buffer
+                .describeVertexAttribute(0, 0, VertexAttributeType::FLOAT_VEC3, 0)                      // Position vertex attribute
+                .describeVertexAttribute(0, 1, VertexAttributeType::FLOAT_VEC3, sizeof(float) * 3);     // Color vertex attribute
+
+        fragShaderDesc
+                .setSourceFile("../../gfxpTestBed/resources/shaders/bin/fragmentShader.spv", true, ShaderType::FRAGMENT_SHADER);
+
+        // Create shader objects
+        gfxp::ShaderHandle vrtxShader = context->createShader(vrtxShaderDesc);
+        gfxp::ShaderHandle fragShader = context->createShader(fragShaderDesc);
+
+        if(vrtxShader == GFXP_INVALID_HANDLE || fragShader == GFXP_INVALID_HANDLE)
         {
-                LOG_WARN("Renderer::createGraphicsPipeline() failed: graphics pipeline creation failed!");
+                LOG_WARN("Renderer::createGraphicsPipeline() failed: creation of vertex and/or fragment shader failed!");
+                m_context->destroyShader(vrtxShader);
+                m_context->destroyShader(fragShader);
+
                 return false;
         }
 
+        // Describe the graphics pipeline
+        gfxp::GraphicsPipelineDescription pipelineDesc;
+
+        pipelineDesc.
+                .setViewport(0, 0, 1024, 1024)                  // TODO: Set viewport size using swapchain extent!
+                .setVertexShader(vrtxShader)
+                .setRasterizer(false, gfxp::TriangleFrontFace::FRONT_FACE_CLOCKWISE, gfxp::CullMode::NO_CULLING)
+                .setFragmentShader(fragShader);
+
+        m_gfxPipeline = m_context->createGraphicsPipeline(pipelineDesc);
+
+        if(m_gfxPipeline == GFXP_INVALID_HANDLE)
+        {
+                LOG_WARN("Renderer::createGraphicsPipeline() failed: graphics pipeline creation failed!");
+                m_context->destroyShader(vrtxShader);
+                m_context->destroyShader(fragShader);
+
+                return false;
+        }
+
+        m_context->destroyShader(vrtxShader);
+        m_context->destroyShader(fragShader);
         return true;
 }
 

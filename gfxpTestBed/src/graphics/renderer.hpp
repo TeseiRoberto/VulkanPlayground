@@ -15,7 +15,8 @@
 #include "gfxp/gfxpEnums.hpp"
 #include "gfxp/gfxpHandleTypes.hpp"
 #include "gfxp/iGraphicContext.hpp"
-
+#include "gfxp/shaders/shaderDescription.hpp"
+#include "gfxp/pipelines/graphicsPipelineDescription.hpp"
 
 
 class Renderer {
@@ -40,6 +41,7 @@ private:
 
 
         std::unique_ptr<gfxp::IGraphicContext>&         m_context;                                      ///< Graphic context instance used by the renderer
+        gfxp::PipelineHandle                            m_gfxPipeline = GFXP_INVALID_HANDLE;            ///< Graphics pipeline used by the renderer
         gfxp::BufferHandle                              m_stagingBuffer = GFXP_INVALID_HANDLE;          ///< Buffer used to transfer data from CPU to GPU
 
         // Temporary methods and data necessary to render a simple rectangle

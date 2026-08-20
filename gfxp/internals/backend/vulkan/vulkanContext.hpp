@@ -13,18 +13,33 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 
-#include "log.hpp"
+#include "gfxpLog.hpp"
+#include "iGraphicContext.hpp"
+#include "internals/handleManager.hpp"
+
+#include "buffers/vulkanBuffer.hpp"
+#include "buffers/vulkanBufferFactory.hpp"
+
+#include "images/vulkanImage.hpp"
+#include "images/vulkanImageFactory.hpp"
+
+#include "shaders/vulkanShader.hpp"
+#include "shaders/vulkanShaderFactory.hpp"
+
+#include "pipelines/vulkanGraphicsPipeline.hpp"
+#include "pipelines/vulkanGraphicsPipelineFactory.hpp"
+
 
 namespace gfxp::backend {
 
 
         /**
          * @class VulkanContext
-         * Models the connection with the Vulkan API driver.
-         * The context keeps track of the basic Vulkan objects such as: instance, physical device,
-         * logical device and queues
+         * Implements the gfxp::IGraphicContext interface for the Vulkan API backend.
+         * Manages the connection with the Vulkan API driver, keeps track of all GPU resources
+         * created through this context and maps them to API agnostic handles
         */
-        class VulkanContext {
+        class VulkanContext : gfxp::IGraphicContext {
         public:
 
                 /**
@@ -36,14 +51,38 @@ namespace gfxp::backend {
                 };
 
 
-
                 explicit                                VulkanContext() = default;
                                                         ~VulkanContext();
 
-                bool                                    init(bool useValidationLayers = false);
-                void                                    terminate();
+                                                        // Disable copies
+                                                        VulkanContext(const VulkanContext& other) = delete;
+                                                        VulkanContext(const VulkanContext&& other) = delete;
 
-                inline bool                             isInit() const                  { return m_instance != VK_NULL_HANDLE; }
+                                                        VulkanContext& operator =(const VulkanContext& other) = delete;
+                                                        VulkanContext& operator =(const VulkanContext&& other) = delete;
+
+                // ======================================================================
+                // Context initialization and termination
+                virtual bool                            init() override;
+                virtual void                            terminate() override;
+
+                virtual bool                            isInit() const override         { return m_instance != VK_NULL_HANDLE; }
+
+                // ======================================================================
+                // GPU resources creation
+                virtual BufferHandle                    createBuffer(const size_t size, const BufferType type) override;
+                virtual ImageHandle                     createImage(const ImageDescription& imgDesc) override;
+                virtual ShaderHandle                    createShader(const ShaderDescription& shaderDesc) override;
+                virtual PipelineHandle                  createGraphicsPipeline(const GraphicsPipelineDescription& pipelineDesc) override;
+
+                // ======================================================================
+                // GPU resources destruction
+                virtual void                            destroyBuffer(const BufferHandle handle) override;
+                virtual void                            destroyImage(const ImageHandle handle) override;
+                virtual void                            destroyShader(const ShaderHandle handle) override;
+                virtual void                            destroyGraphicsPipeline(const PipelineHandle handle) override;
+
+                // ======================================================================
 
                 inline VkInstance                       getInstance()                   { return m_instance; }
                 inline VkPhysicalDevice                 getPhysicalDevice()             { return m_physDevice; }
@@ -72,7 +111,14 @@ namespace gfxp::backend {
 
                 QueueFamilyIndices      m_queueFamilyIndices;                           ///< Indices to queue families required by the context
                 VkQueue                 m_gfxQueue = VK_NULL_HANDLE;                    ///< Graphic queue to which renderers using this context submits commands
-        
+
+                // Handle managers for GPU resources
+                HandleManager<VulkanBuffer, gfxp::BufferHandle>                 m_bufferHandlesMngr;            ///< Handle manager for vulkan buffer objects
+                HandleManager<VulkanStagingBuffer, gfxp::BufferHandle>          m_stagingBufferHandlesMngr;     ///< Handle manager for vulkan staging buffer objects
+                HandleManager<VulkanImage, gfxp::ImageHandle>                   m_imageHandlesMngr;             ///< Handle manager for vulkan image objects
+                HandleManager<VulkanShader, gfxp::ShaderHandle>                 m_shaderHandlesMngr;            ///< Handle manager for vulkan shader objects
+                HandleManager<VulkanGraphicsPipeline, gfxp::PipelineHandle>     m_gfxPipelineHandlesMngr;       ///< Handle manager for vulkan graphics pipeline objects
+
                 static const std::vector<const char*>   REQUIRED_VALIDATION_LAYERS;     ///< Validation layers required by the renderer
         };
 
