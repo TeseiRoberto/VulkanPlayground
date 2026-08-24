@@ -1,72 +1,58 @@
 
 /**
  * @file vulkanShader.hpp
- * Declares the vp::VulkanShader class
+ * Declares the gfxp::backend::VulkanShader struct
 */
 
-#ifndef VP_VULKAN_SHADER_H
-#define VP_VULKAN_SHADER_H
+#ifndef GFXP_BACKEND_VULKAN_SHADER_H
+#define GFXP_BACKEND_VULKAN_SHADER_H
 
-#include <cstdint>
 #include <vector>
 #include <string>
-#include <fstream>
-#include <filesystem>
 #include <vulkan/vulkan.h>
 
-#include "log.hpp"
-#include "commonEnums.hpp"
-#include "vulkanContext.hpp"
+#include "gfxpEnums.hpp"
 
-namespace vp {
+namespace gfxp::backend {
+
+        class VulkanContext;
 
 
         /**
-         * @class VulkanShader
-         * Models a, single stage, SPIR-V shader that can be used to build a Vulkan graphics pipeline
+         * @struct VulkanShader
+         * POD struct that models a shader object for the Vulkan API backend
         */
-        class VulkanShader {
-        public:
-                                                VulkanShader(VulkanContext* context);
-                                                ~VulkanShader();
+        struct VulkanShader {
+                gfxp::ShaderType        type = gfxp::ShaderType::UNKNOWN_SHADER;                ///< Type of shader
+                VkShaderModule          handle = VK_NULL_HANDLE;                                ///< Handle to the shader module
+                std::string             entryPointName = "main";                                ///< Name of the entry point function of the shader
 
-                                                // Disable copies
-                                                VulkanShader(const VulkanShader& other) = delete;
-                VulkanShader&                   operator = (const VulkanShader& other) = delete;
+                std::vector<VkVertexInputBindingDescription>    vrtxBindingsDescriptions;       ///< Structs wich describes the vertex bindings (used only for vertex shaders)
+                std::vector<VkVertexInputAttributeDescription>  vrtxAttributesDescriptions;     ///< Structs wich describes the vertex attributes used by the shader (used only for vertex shaders)
 
-                inline bool                     isValid() const { return (m_type != ShaderType::UNKNOWN_SHADER && m_module != VK_NULL_HANDLE); }
-
-                bool                            loadFromSource(const std::filesystem::path& filePath, ShaderType type, const std::string& entryPointName = "main");
-                bool                            loadFromBinary(const std::filesystem::path& filePath, ShaderType type, const std::string& entryPointName = "main");
-
-                void                            unload();
-
-                inline ShaderType               getType() const         { return m_type; }
-                inline VkShaderModule           getModule() const       { return m_module; }
-                inline const std::string&       getEntryPoint() const   { return m_entryPointName; }
-
-                void                            describeVertexBinding(uint32_t binding, VertexInputRate inputRate, size_t stride);
-                void                            describeVertexAttribute(uint32_t binding, uint32_t location, VertexAttributeType attributeType, size_t offset);
-
-                inline std::vector<VkVertexInputBindingDescription>     getVertexBindingsDescriptions() const      { return m_bindingsDescriptions; }
-                inline std::vector<VkVertexInputAttributeDescription>   getVertexAttributesDescriptions() const    { return m_attributesDescriptions; }
-
-        private:
-                std::vector<char>               loadFileContent(const std::filesystem::path& filePath);
-
-                bool                            createModule(const std::vector<char>& shaderBytecode, ShaderType type);
-                void                            destroyModule();
+                VulkanContext&          context;                                                ///< Context to which the shader belongs to
 
 
-                VulkanContext*                  m_context = nullptr;                            ///< Vulkan context to which the shader is related
-                ShaderType                      m_type = ShaderType::UNKNOWN_SHADER;            ///< Type of shader
-                VkShaderModule                  m_module = VK_NULL_HANDLE;                      ///< Handle to the shader module
-                std::string                     m_entryPointName = "";                          ///< Name of the entry point function of the shader
+                /**
+                 * @brief VulkanShader
+                 * Struct constructor
+                 * @param context Graphic context that owns the shader object
+                */
+                VulkanShader(VulkanContext& context) : context(context)
+                {}
 
-                std::vector<VkVertexInputBindingDescription>    m_bindingsDescriptions;         ///< Structs wich describes the vertex bindings
-                std::vector<VkVertexInputAttributeDescription>  m_attributesDescriptions;       ///< Structs wich describes the vertex attributes used by the shader
+
+                /**
+                 * @brief VulkanShader::isValid
+                 * Utility method to check if the object is correctly initialized or not
+                */
+                inline bool isValid()
+                {
+                        return (handle != VK_NULL_HANDLE);
+                }
         };
 
-}
 
-#endif // VP_VULKAN_SHADER_H
+} // namespace gfxp::backend
+
+#endif // GFXP_BACKEND_VULKAN_SHADER_H

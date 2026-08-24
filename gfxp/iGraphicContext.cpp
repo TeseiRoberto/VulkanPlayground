@@ -16,14 +16,14 @@ namespace gfxp {
          * @param backendApi Graphics API to be used as backend
          * @return An uninitialized, API specific, graphic context instance
         */
-        std::unique_ptr<IGraphicContext> IGraphicContext::create(const GraphicsApi backendApi)
+        std::unique_ptr<IGraphicContext> IGraphicContext::create(const GraphicApi backendApi)
         {
                 IGraphicContext* context = nullptr;
 
                 switch(backendApi)
                 {
-                        case GraphicsApi::VULKAN:
-                                context = new gfxp::backend::VulkanContext(true);
+                        case GraphicApi::VULKAN:
+                                context = new gfxp::backend::VulkanContext();
                                 break;
 
                         default:
@@ -33,7 +33,7 @@ namespace gfxp {
                                 break;
                 }
 
-                return std::unique_ptr(context);
+                return std::unique_ptr<IGraphicContext>(context);
         }
 
 

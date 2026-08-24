@@ -8,8 +8,7 @@
 #ifndef GFXP_HANDLE_TYPES_H
 #define GFXP_HANDLE_TYPES_H
 
-#include <cstdint>
-#include <limits>
+#include <cstddef>
 
 namespace gfxp {
 
@@ -18,35 +17,35 @@ namespace gfxp {
          * @brief GFXP_INVALID_HANDLE
          * Value used to mark that an handle, to any type of GPU resource, is invalid
         */
-        using GFXP_INVALID_HANDLE = std::numeric_limits<uint32_t>::max();
+        constexpr std::nullptr_t GFXP_INVALID_HANDLE = nullptr;
 
 
         /**
          * @brief BufferHandle
          * Definition of handle to a GPU buffer resource
         */
-        using BufferHandle = uint32_t;
+        using BufferHandle = void*;
 
 
         /**
          * @brief ImageHandle
-         * Definition of handle to a GPU image resource
+         * Definition of handle to a GPU texture resource
         */
-        using ImageHandle = uint32_t;
+        using TextureHandle = void*;
 
 
         /**
          * @brief ShaderHandle
          * Definition of handle to a GPU shader resource
         */
-        using ShaderHandle = uint32_t;
+        using ShaderHandle = void*;
 
 
         /**
          * @brief PipelineHandle
          * Definition of handle to a GPU graphics/compute pipeline resource
         */
-        using PipelineHandle = uint32_t;
+        using PipelineHandle = void*;
 
 }
 

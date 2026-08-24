@@ -4,8 +4,8 @@
  * Declares the gfxp::GraphicsPipelineDescription class
 */
 
-#ifndef GFXP_GRAPHICS_PIPELINE_BUILDER_H
-#define GFXP_GRAPHICS_PIPELINE_BUILDER_H
+#ifndef GFXP_GRAPHICS_PIPELINE_DESCRIPTION_H
+#define GFXP_GRAPHICS_PIPELINE_DESCRIPTION_H
 
 #include <cstdint>
 #include <map>
@@ -13,7 +13,6 @@
 #include "gfxpLog.hpp"
 #include "gfxpEnums.hpp"
 #include "gfxpHandleTypes.hpp"
-#include "shader/shaderDescription.hpp"
 
 namespace gfxp {
 
@@ -24,25 +23,6 @@ namespace gfxp {
         */
         class GraphicsPipelineDescription {
         public:
-                                                GraphicsPipelineDescription();
-                                                ~GraphicsPipelineDescription() = default;
-
-                GraphicsPipelineDescription&    setViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-                GraphicsPipelineDescription&    setInputAssembly(PrimitiveTopologyType primitiveType);
-
-                GraphicsPipelineDescription&    setVertexShader(const ShaderHandle handle);
-                GraphicsPipelineDescription&    setFragmentShader(const ShaderHandle handle);
-
-                GraphicsPipelineDescription&    setRasterizer(bool wireframe, TriangleFrontFace frontFace, CullMode cullMode);
-                //GraphicsPipelineDescription&    setMultisampling(); TODO: Add implementation...
-                //GraphicsPipelineDescription&    setColorBlending(); TODO: Add implementation...
-
-                GraphicsPipelineDescription&    setDepthTest(bool enabled, CompareOperatorType compareOp);
-                //GraphicsPipelineDescription&    setStencilTest(); TODO: Add implementation...
-                
-                void                            reset();
-
-        private:
 
                 /**
                  * @struct ViewportDescription
@@ -57,10 +37,10 @@ namespace gfxp {
 
 
                 /**
-                 * @struct RasterizerStageDescription
+                 * @struct RasterizerDescription
                  * Describes the properties of the rasterization stage for the graphics pipeline
                 */
-                struct RasterizerStageDescription {
+                struct RasterizerDescription {
                         bool                    wireframe = false;                                              ///< Indicates if the graphic shapes rendered by the pipeline shall be wireframe or filled
                         TriangleFrontFace       triangleFrontFace = TriangleFrontFace::FRONT_FACE_CLOCKWISE;    ///< Indicates wich face of a triangle shall be considered the visible/front face
                         CullMode                cullMode = CullMode::NO_CULLING;                                ///< Indicates which triangle shall be culled by the graphics pipeline
@@ -73,20 +53,47 @@ namespace gfxp {
                 */
                 struct DepthTestDescription {
                         bool                    enabled = false;                                                ///< Indicates if the depth test is enabled for the graphics pipeline
-                        CompareOperatorType     compareOp = CompareOperatorType::LESS_THEN;                     ///< Type of compare operator that shall be used during depth test
+                        CompareOperatorType     compareOp = CompareOperatorType::LESS_THAN;                     ///< Type of compare operator that shall be used during depth test
                 };
 
 
-                bool                                                    m_isViewportSet = false;                                ///< Indicates if the setViewport method has been called or not
-                ViewportDescription                                     m_viewportDesc = {};                                    ///< Struct that describes the viewport
-                PrimitiveTopologyType                                   m_primitiveType = PrimitiveTopologyType::TRIANGLE_LIST; ///< Type of primitive graphic shapes that the pipeline shall render
-                std::map<ShaderType, ShaderHandle>                      m_shadersDesc;                                          ///< Indicates shaders to be used for the programmable stages of the graphics pipeline
-                RasterizerStageDescription                              m_rasterizerDesc = {};                                  ///< Struct that describes properties for the fixed rasterization stage of the graphics pipeline
-                DepthTestDescription                                    m_depthTestDesc = {};                                   ///< Struct that describes if and how depth test shall be performed by the graphics pipeline
+                                                        GraphicsPipelineDescription();
+                                                        ~GraphicsPipelineDescription() = default;
+
+                GraphicsPipelineDescription&            setViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+                GraphicsPipelineDescription&            setPrimitiveTopologyType(PrimitiveTopologyType primitiveType);
+
+                GraphicsPipelineDescription&            setVertexShader(const ShaderHandle handle);
+                GraphicsPipelineDescription&            setFragmentShader(const ShaderHandle handle);
+
+                GraphicsPipelineDescription&            setRasterizer(bool wireframe, TriangleFrontFace frontFace, CullMode cullMode);
+                //GraphicsPipelineDescription&            setMultisampling(); TODO: Add implementation...
+                //GraphicsPipelineDescription&            setColorBlending(); TODO: Add implementation...
+
+                GraphicsPipelineDescription&            setDepthTest(bool enabled, CompareOperatorType compareOp);
+                //GraphicsPipelineDescription&            setStencilTest(); TODO: Add implementation...
+
+                inline const bool                       isViewportSet() const                   { return m_isViewportSet; }
+                inline const ViewportDescription&       getViewportDescription() const          { return m_viewportDesc; }
+                inline const PrimitiveTopologyType&     getPrimitiveTopologyType() const        { return m_primitiveType; }
+                const ShaderHandle                      getVertexShader() const;
+                const ShaderHandle                      getFragmentShader() const;
+                inline const RasterizerDescription      getRasterizerDescription() const        { return m_rasterizerDesc; }
+                inline const DepthTestDescription&      getDepthTestDescription() const         { return m_depthTestDesc; }
+
+                void                                    reset();
+
+        private:
+                bool                                    m_isViewportSet = false;                                ///< Indicates if the setViewport method has been called or not
+                ViewportDescription                     m_viewportDesc = {};                                    ///< Struct that describes the viewport
+                PrimitiveTopologyType                   m_primitiveType = PrimitiveTopologyType::TRIANGLE_LIST; ///< Type of primitive graphic shapes that the pipeline shall render
+                std::map<ShaderType, ShaderHandle>      m_shadersDesc;                                          ///< Indicates shaders to be used for the programmable stages of the graphics pipeline
+                RasterizerDescription                   m_rasterizerDesc = {};                                  ///< Struct that describes properties for the fixed rasterization stage of the graphics pipeline
+                DepthTestDescription                    m_depthTestDesc = {};                                   ///< Struct that describes if and how depth test shall be performed by the graphics pipeline
         };
 
 
 } // namespace gfxp
 
-#endif // GFXP_GRAPHICS_PIPELINE_BUILDER_H
+#endif // GFXP_GRAPHICS_PIPELINE_DESCRIPTION_H
 

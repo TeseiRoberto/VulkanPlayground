@@ -6,6 +6,18 @@
 
 #include "vulkanContext.hpp"
 
+//#include "buffers/vulkanBuffer.hpp"
+//#include "buffers/vulkanBufferFactory.hpp"
+//
+//#include "textures/vulkanTexture.hpp"
+//#include "textures/vulkanTextureFactory.hpp"
+
+#include "shaders/vulkanShader.hpp"
+#include "shaders/vulkanShaderFactory.hpp"
+
+#include "pipelines/vulkanGraphicsPipeline.hpp"
+#include "pipelines/vulkanGraphicsPipelineFactory.hpp"
+
 namespace gfxp::backend {
 
 
@@ -65,20 +77,11 @@ namespace gfxp::backend {
         void VulkanContext::terminate()
         {
                 // Destroy all GPU resources not destroyed yet
-                m_bufferHandlesMngr.applyToAll( VulkanBufferFactory::destroyBuffer() );
-                m_bufferHandlesMngr.clear();
-                
-                m_stagingBufferHandlesMngr.applyToAll( VulkanBufferFactory::destroyStagingBuffer() );
-                m_stagingBufferHandlesMngr.clear();
-
-                m_ImageHandlesMngr.applyToAll( VulkanImageFactory::destroyImage() );
-                m_ImageHandlesMngr.clear();
-
-                m_shaderHandlesMngr.applyToAll( VulkanShaderfactory::destroyShader() );
-                m_shaderHandlesMngr.clear();
-
-                m_gfxPipelineHandlesMngr.applyToAll( VulkanGraphicsPipelineFactory::destroyPipeline() );
-                m_gfxPipelineHandlesMngr.clear();
+                // TODO: Methods not implemented yet!
+                //m_bufferResources.applyToAll( [this](BufferHandle handle) { this->destroyBuffer(handle); } );
+                //m_textureResources.applyToAll( [this](TextureHandle handle) { this->destroyTexture(handle); } );
+                m_shaderResources.applyToAll( [this](ShaderHandle handle) { this->destroyShader(handle); } );
+                m_gfxPipelineResources.applyToAll( [this](PipelineHandle handle) { this->destroyGraphicsPipeline(handle); } );
 
                 // Destroy vulkan context objects
                 destroyLogicalDevice();
@@ -91,79 +94,86 @@ namespace gfxp::backend {
          * @brief VulkanContext::createBuffer
          * @param size Size, expressed in bytes, of the buffer to be created
          * @param type Type of buffer to be created
-         * @return A valid handle to a VulkanBuffer object on success, an invalid handle otherwise
+         * @return A valid handle (pointer) to a VulkanBuffer object on success, an invalid handle otherwise
         */
-        BufferHandle VulkanContext::createBuffer(const size_t size, const BufferType type) override
+        BufferHandle VulkanContext::createBuffer(const size_t size, const BufferType type)
         {
-                BufferHandle handle = GFXP_INVALID_HANDLE;
+                /* TODO: Implement factory class!
+                VulkanBufferFactory bufferFactory(*this);
+                VulkanBuffer* buffer = nullptr;
 
+                // Create a buffer object of the correct type
                 if(type == gfxp::BufferType::STAGING_BUFFER)
                 {
-                        VulkanStagingBuffer stagingBuffer {};
-
-                        if( !VulkanBufferFactory::createStagingBuffer(size, type, stagingBuffer) )
-                                return GFXP_INVALID_HANDLE;
-
-                        handle = m_stagingBufferHandlesMngr.addObject(stagingBuffer);
+                        buffer = bufferFactory.createStagingBuffer(size);
 
                 } else {
-                        VulkanBuffer buffer {};
-
-                        if( !VulkanBufferFactory::createBuffer(size, type, buffer) )
-                                return GFXP_INVALID_HANDLE;
-
-                        handle = m_bufferHandlesMngr.addObject(buffer);
+                        buffer = bufferFactory.createBuffer(size, type);
                 }
 
-                return handle;
+                if(buffer == nullptr)
+                        return GFXP_INVALID_HANDLE;
+
+                return static_cast<BufferHandle>(buffer);*/
+                return GFXP_INVALID_HANDLE;
         }
 
 
         /**
-         * @brief VulkanContext::createImage
-         * @param imgDesc Struct that describes the properties of the image to be created
-         * @return A valid handle to a VulkanImage object on success, an invalid handle otherwise
+         * @brief VulkanContext::createTexture
+         * @param textureDesc Struct that describes the properties of the texture to be created
+         * @return A valid handle (pointer) to a VulkanImage object on success, an invalid handle otherwise
         */
-        ImageHandle VulkanContext::createImage(const ImageDescription& imgDesc) override
+        TextureHandle VulkanContext::createTexture(const TextureDescription& textureDesc)
         {
-                VulkanImage img {};
+                /* TODO: Implement factory class!
+                VulkanTextureFactory textureFactory(*this);
+                VulkanTexture* texture = textureFactory.createTexture(textureDesc);
 
-                if( !VulkanImageFactory::createImage(imgDesc, img) )
+                if(texture == nullptr)
                         return GFXP_INVALID_HANDLE;
 
-                return m_imageHandlesMngr.addObject(img);
+                m_textureResources.add(texture);
+                return static_cast<TextureHandle>( texture );*/
+                return GFXP_INVALID_HANDLE;
         }
 
 
         /**
          * @brief VulkanContext::createShader
          * @param shaderDesc Struct that describes the properties of the shader to be created
-         * @return A valid handle to a VulkanShader object on success, an invalid handle otherwise
+         * @return A valid handle (pointer) to a VulkanShader object on success, an invalid handle otherwise
         */
-        ShaderHandle VulkanContext::createShader(const ShaderDescription& shaderDesc) override
+        ShaderHandle VulkanContext::createShader(const ShaderDescription& shaderDesc)
         {
-                VulkanShader shader {};
+                VulkanShaderFactory shaderFactory(*this);
+                VulkanShader* shader = shaderFactory.createShader(shaderDesc);
 
-                if( !VulkanShaderFactory::createShader(shaderDesc, shader) )
+                if(shader == nullptr)
                         return GFXP_INVALID_HANDLE;
 
-                return m_shaderHandlesMngr.addObject(shader);
+                m_shaderResources.add(shader);
+                return static_cast<ShaderHandle>( shader );
         }
 
 
         /**
          * @brief VulkanContext::createGraphicsPipeline
          * @param pipelineDesc Struct that describes the properties of the graphics pipeline to be created
-         * @return A valid handle to a Vulkan object on success, an invalid handle otherwise
+         * @return A valid handle (pointer) to a Vulkan object on success, an invalid handle otherwise
         */
-        PipelineHandle VulkanContext::createGraphicsPipeline(const GraphicsPipelineDescription& pipelineDesc) override
+        PipelineHandle VulkanContext::createGraphicsPipeline(const GraphicsPipelineDescription& pipelineDesc)
         {
-                VulkanGraphicsPipeline pipeline {};
+                VulkanGraphicsPipelineFactory pipelineFactory(*this);
 
-                if( !VulkanGraphicsPipelineFactory::createPipeline(pipelineDesc, pipeline) )
+                // TODO: Decide how to handle render passes
+                VulkanGraphicsPipeline* pipeline = pipelineFactory.createPipeline(pipelineDesc, VK_NULL_HANDLE);
+
+                if(pipeline == nullptr)
                         return GFXP_INVALID_HANDLE;
 
-                return m_gfxPipelineHandlesMngr.addObject(pipeline);
+                m_gfxPipelineResources.add(pipeline);
+                return static_cast<PipelineHandle>( pipeline );
         }
 
 
@@ -173,82 +183,77 @@ namespace gfxp::backend {
          * Destoyes the VulkanBuffer object associated to the given handle
          * @param handle Handle to the VulkanBuffer object to be destroyed
         */
-        void VulkanContext::destroyBuffer(const BufferHandle handle) override
+        void VulkanContext::destroyBuffer(BufferHandle& handle)
         {
-                VulkanBuffer buffer {};
+                /* TODO: Implement factory class!
+                VulkanBuffer* buffer = static_cast<VulkanBuffer*>(handle);
 
-                if( m_bufferHandlesMngr.findObject(handle, buffer) )
+                // Try to delete the buffer resource
+                if( !m_bufferResources.remove(handle) )
+                        return;
+
+                VulkanStagingBuffer* stagingBuffer = dynamic_cast<VulkanStagingBuffer*>(buffer);
+
+                // Destroy the buffer using the appropriate method
+                if(stagingBuffer != nullptr)
                 {
-                        // If the handle is related to a buffer object, then destroy such object and its handle
-                        VulkanBufferFactory::destroyBuffer(buffer);
-                        m_bufferHandlesMngr.removeObject(handle);
+                        VulkanBufferFactory::destroyStagingBuffer(stagingBuffer);
 
-                        return;
-                
                 } else {
-                        // Otherwise, check if the handle is related to a staging buffer object
-                        VulkanStagingBuffer stagingBuffer {};
-
-                        if( m_stagingBufferHandlesMngr.findObject(handle, stagingBuffer) )
-                        {
-                                // If the handle is related to a staging buffer object, then destroy such object and its handle
-                                VulkanBufferFactory::destroyStagingBuffer(stagingBuffer);
-                                m_stagingBufferHandlesMngr.removeObject(handle);
-
-                                return;
-                        }
-                }
+                        VulkanBufferFactory::destroyBuffer(buffer);
+                }*/
         }
 
 
         /**
-         * @brief VulkanContext::destroy
-         * Destoyes the VulkanImage object associated to the given handle
-         * @param handle Handle to the VulkanImage object to be destroyed
+         * @brief VulkanContext::destroyTexture
+         * Destoyes the VulkanTexture object associated to the given handle
+         * @param handle Handle to the VulkanTexture object to be destroyed
         */
-        void VulkanContext::destroyImage(const ImageHandle handle) override
+        void VulkanContext::destroyTexture(TextureHandle& handle)
         {
-                VulkanImage img {};
-
-                if( !m_imageHandlesMngr.findObject(handle, img) )
+                /* TODO: Implement factory class!
+                VulkanTexture* texture = static_cast<VulkanTexture*>(handle);
+                
+                // Try to delete the texture resource
+                if( m_textureResources.remove(texture) )
                         return;
 
-                VulkanImageFactory::destroyImage(img);
-                m_imageHandlesMngr.removeObject(handle);
+                VulkanTextureFactory::destroyTexture(texture);*/
         }
 
 
         /**
-         * @brief VulkanContext::destroy
+         * @brief VulkanContext::destroyShader
          * Destoyes the VulkanShader object associated to the given handle
          * @param handle Handle to the VulkanShader object to be destroyed
         */
-        void VulkanContext::destroyShader(const ShaderHandle handle) override
+        void VulkanContext::destroyShader(ShaderHandle& handle)
         {
-                VulkanShader shader {};
+                VulkanShader* shader = static_cast<VulkanShader*>(handle);
 
-                if( !m_shaderHandlesMngr.findObject(handle, shader) )
+                // Try to delete the shader resource
+                if( m_shaderResources.remove(shader) )
                         return;
 
                 VulkanShaderFactory::destroyShader(shader);
-                m_shaderHandlesMngr.removeObject(handle);
         }
 
 
         /**
-         * @brief VulkanContext::destroy
+         * @brief VulkanContext::destroyGraphicsPipeline
          * Destoyes the VulkanGraphicsPipeline object associated to the given handle
          * @param handle Handle to the VulkanGraphicsPipeline object to be destroyed
         */
-        void VulkanContext::destroyGraphicsPipeline(const PipelineHandle handle) override
+        void VulkanContext::destroyGraphicsPipeline(PipelineHandle& handle)
         {
-                VulkanGraphicsPipeline pipeline {};
-
-                if( !m_gfxPipelineHandlesMngr.findObject(handle, pipeline) )
+                VulkanGraphicsPipeline* pipeline = static_cast<VulkanGraphicsPipeline*>(handle);
+                
+                // Try to delete the graphics pipeline resource
+                if( m_gfxPipelineResources.remove(pipeline) )
                         return;
 
                 VulkanGraphicsPipelineFactory::destroyPipeline(pipeline);
-                m_gfxPipelineHandlesMngr.removeObject(handle);
         }
 
 

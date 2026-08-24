@@ -45,12 +45,12 @@ namespace gfxp {
 
 
         /**
-         * @brief GraphicsPipelineDescription::setInputAssembly
+         * @brief GraphicsPipelineDescription::setPrimitiveTopologyType
          * Sets the type of primitive topology that will be rendered by the pipeline created using this description instance
          * @param primitiveType Primitive topology type that will be rendered by the pipeline
          * @return Reference to this description class instance, so that calls to methods can be concatenated
         */
-        GraphicsPipelineDescription& GraphicsPipelineDescription::setInputAssembly(PrimitiveTopologyType primitiveType)
+        GraphicsPipelineDescription& GraphicsPipelineDescription::setPrimitiveTopologyType(PrimitiveTopologyType primitiveType)
         {
                 m_primitiveType = primitiveType;
                 return *this;
@@ -63,7 +63,7 @@ namespace gfxp {
          * @param handle Handle to the vertex shader object, such handle can be destroyed safely after graphics pipeline creation
          * @return Reference to this description class instance, so that calls to methods can be concatenated
         */
-        GraphicsPipelineDescription& GraphicsPipelineDescription::setVertexShader(const ShaderHandle handle, const ShaderDescription& shaderDesc)
+        GraphicsPipelineDescription& GraphicsPipelineDescription::setVertexShader(const ShaderHandle handle)
         {
                 if(handle == GFXP_INVALID_HANDLE)
                 {
@@ -71,7 +71,7 @@ namespace gfxp {
                         return *this;
                 }
 
-                m_shaderDesc.insert( { ShaderType::VERTEX_SHADER, handle } );
+                m_shadersDesc.insert( { ShaderType::VERTEX_SHADER, handle } );
                 return *this;
         }
 
@@ -82,7 +82,7 @@ namespace gfxp {
          * @param handle Handle to the fragment shader object, such handle can be destroyed safely after graphics pipeline creation
          * @return Reference to this description class instance, so that calls to methods can be concatenated
         */
-        GraphicsPipelineDescription& GraphicsPipelineDescription::setFragmentShader(const ShaderHandle handle, const ShaderDescription& shaderDesc)
+        GraphicsPipelineDescription& GraphicsPipelineDescription::setFragmentShader(const ShaderHandle handle)
         {
                 if(handle == GFXP_INVALID_HANDLE)
                 {
@@ -90,7 +90,7 @@ namespace gfxp {
                         return *this;
                 }
 
-                m_shaderDesc.insert( { ShaderType::FRAGMENT_SHADER, handle } );
+                m_shadersDesc.insert( { ShaderType::FRAGMENT_SHADER, handle } );
                 return *this;
         }
 
@@ -105,7 +105,7 @@ namespace gfxp {
         GraphicsPipelineDescription& GraphicsPipelineDescription::setRasterizer(bool wireframe, TriangleFrontFace frontFace, CullMode cullMode)
         {
                 m_rasterizerDesc.wireframe              = wireframe;
-                m_rasterizerDesc.triangleFrontFace      = triangleFrontface;
+                m_rasterizerDesc.triangleFrontFace      = frontFace;
                 m_rasterizerDesc.cullMode               = cullMode;
 
                 return *this;
@@ -122,9 +122,39 @@ namespace gfxp {
         GraphicsPipelineDescription& GraphicsPipelineDescription::setDepthTest(bool enabled, CompareOperatorType compareOp)
         {
                 m_depthTestDesc.enabled         = enabled;
-                m_depthTestDesc.compareOp       = compareOp
+                m_depthTestDesc.compareOp       = compareOp;
 
                 return *this;
+        }
+
+
+        /**
+         * @brief GraphicsPipelineDescription::getVertexShader
+         * @return handle to the shader that shall be used as vertex shader for the graphics pipeline,
+         *      GFXP_INVALID_HANDLE if no vertex shader is set
+        */
+        const ShaderHandle GraphicsPipelineDescription::getVertexShader() const
+        {
+                auto it = m_shadersDesc.find(gfxp::ShaderType::VERTEX_SHADER);
+                if(it == m_shadersDesc.end())
+                        return GFXP_INVALID_HANDLE;
+
+                return it->second;
+        }
+
+
+        /**
+         * @brief GraphicsPipelineDescription::getFragmentShader
+         * @return handle to the shader that shall be used as vertex shader for the graphics pipeline,
+         *      GFXP_INVALID_HANDLE if no fragment shader is set
+        */
+        const ShaderHandle GraphicsPipelineDescription::getFragmentShader() const
+        {
+                auto it = m_shadersDesc.find(gfxp::ShaderType::FRAGMENT_SHADER);
+                if(it == m_shadersDesc.end())
+                        return GFXP_INVALID_HANDLE;
+
+                return it->second;
         }
 
 

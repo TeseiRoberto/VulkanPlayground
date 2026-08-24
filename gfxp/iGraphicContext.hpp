@@ -16,6 +16,13 @@
 namespace gfxp {
 
 
+        // Forward declarations for GPU resource description classes
+        class BufferDescription;
+        class TextureDescription;
+        class ShaderDescription;
+        class GraphicsPipelineDescription;
+
+
         /**
          * @class IGraphicContext
          * Interface implemented by API specfic graphic context classes
@@ -23,37 +30,37 @@ namespace gfxp {
         class IGraphicContext {
         public:
                 virtual                                 ~IGraphicContext() = default;
-                static std::unique_ptr<IGraphicContext> create(const GraphicsApi backendApi);
+                static std::unique_ptr<IGraphicContext> create(const GraphicApi backendApi);
 
-                // Disable copies
-                IGraphicContext(const IGraphicContext& other) = delete;
-                IGraphicContext(const IGraphicContext&& other) = delete;
+                                                        // Disable copies
+                                                        IGraphicContext(const IGraphicContext& other) = delete;
+                                                        IGraphicContext(const IGraphicContext&& other) = delete;
 
-                IGraphicContext& operator =(const IGraphicContext& other) = delete;
-                IGraphicContext& operator =(const IGraphicContext&& other) = delete;
+                                                        IGraphicContext& operator =(const IGraphicContext& other) = delete;
+                                                        IGraphicContext& operator =(const IGraphicContext&& other) = delete;
 
-                // ======================================================================
+                // ====================================================================================================
                 // Context initialization and termination
-                virtual bool                    init() = 0;
-                virtual void                    terminate() = 0;
-                virtual bool                    isInit() = 0;
+                virtual bool                            init() = 0;
+                virtual void                            terminate() = 0;
+                virtual bool                            isInit() const = 0;
 
-                // ======================================================================
+                // ====================================================================================================
                 // GPU resources creation
-                virtual BufferHandle            createBuffer(const size_t size, const BufferType type) = 0;
-                virtual ImageHandle             createImage(const ImageDescription& imgDesc) = 0;
-                virtual ShaderHandle            createShader(const ShaderDescription& shaderDesc) = 0;
-                virtual PipelineHandle          createGraphicsPipeline(const GraphicsPipelineDescription& shaderDesc) = 0;
+                virtual BufferHandle                    createBuffer(const size_t size, const BufferType type) = 0;
+                virtual TextureHandle                   createTexture(const TextureDescription& textureDesc) = 0;
+                virtual ShaderHandle                    createShader(const ShaderDescription& shaderDesc) = 0;
+                virtual PipelineHandle                  createGraphicsPipeline(const GraphicsPipelineDescription& shaderDesc) = 0;
 
-                // ======================================================================
+                // ====================================================================================================
                 // GPU resources destruction
-                virtual void                    destroyBuffer(const BufferHandle handle) = 0;
-                virtual void                    destroyImage(const ImageHandle handle) = 0;
-                virtual void                    destroyShader(const ShaderHandle handle) = 0;
-                virtual void                    destroyGraphicsPipeline(const PipelineHandle handle) = 0;
+                virtual void                            destroyBuffer(BufferHandle& handle) = 0;
+                virtual void                            destroyTexture(TextureHandle& handle) = 0;
+                virtual void                            destroyShader(ShaderHandle& handle) = 0;
+                virtual void                            destroyGraphicsPipeline(PipelineHandle& handle) = 0;
 
         protected:
-                                IGraphicContext() = default;
+                                                        IGraphicContext() = default;
         };
 
 

@@ -29,7 +29,7 @@ namespace gfxp {
         */
         ShaderDescription& ShaderDescription::setSourceFile(const std::filesystem::path& filePath, bool isBinary, ShaderType type)
         {
-                if(type == ShaderType::UNKNOWN)
+                if(type == ShaderType::UNKNOWN_SHADER)
                 {
                         LOG_ERROR("ShaderDescription::setSourceFile() failed: given shader type is unknown!");
                         return *this;
@@ -37,7 +37,7 @@ namespace gfxp {
 
                 m_isBinary = isBinary;
                 m_filePath = filePath;
-                m_shaderType = shaderType;
+                m_shaderType = type;
 
                 return *this;
         }
@@ -58,21 +58,27 @@ namespace gfxp {
         /**
          * @brief ShaderDescription::describeVertexBinding
          * Describes a binding point (slot) of the shader for a vertex buffer
-         * @param binding Numeric index of the binding point (slot)
+         * @param slotIndex Numeric index of the binding point (slot)
          * @param inputRate Rate at which data shall be fetched from the vertex buffer
          * @param stride Bytes between two different "data entries" stored in the vertex buffer
          * @return Reference to this description class instance so that methods can be concatenated
          * @warning Calling this method on an instance that does not describe a vertex shader has no effect
         */
-        ShaderDescription& ShaderDescription::describeVertexBinding(uint32_t binding, VertexInputRate inputRate, size_t stride)
+        ShaderDescription& ShaderDescription::describeVertexBinding(uint32_t slotIndex, VertexInputRate inputRate, size_t stride)
         {
-                if(m_shaderType != ShaderType::VERTEX:SHADER)
+                if(m_shaderType != ShaderType::VERTEX_SHADER)
                 {
                         LOG_WARN("ShaderDescription::describeVertexBinding() failed: the description class instance is not describing a vertex shader!");
                         return *this;
                 }
 
-                m_vertexBindingsDesc.emplace( binding, inputRate, stride );
+                VertexBindingDescription desc {};
+
+                desc.slotIndex  = slotIndex;
+                desc.inputRate  = inputRate;
+                desc.stride     = stride;
+
+                m_vertexBindingsDesc.push_back(desc);
                 return *this;
         }
 
@@ -80,22 +86,29 @@ namespace gfxp {
         /**
          * @brief ShaderDescription::describeVertexAttribute
          * Describes a vertex attribute taken as input by a vertex shader
-         * @param binding Vertex binding point (slot) from which the attribute is fetched
+         * @param bindingSlotIndex Vertex binding point (slot) from which the attribute is fetched
          * @param location Unique numeric id used to identify the attribute (must be unique even if different binding points are used)
          * @param attributeType Data type of the vertex attribute
          * @param offset Offset of the attribute from the start of the "data entry" fetched from the vertex buffer
          * @return Reference to this description class instance so that methods can be concatenated
          * @warning Calling this method on an instance that does not describe a vertex shader has no effect
         */
-        ShaderDescription& ShaderDescription::describeVertexAttribute(uint32_t binding, uint32_t location, VertexAttributeType attributeType, size_t offset)
+        ShaderDescription& ShaderDescription::describeVertexAttribute(uint32_t bindingSlotIndex, uint32_t location, VertexAttributeType attributeType, size_t offset)
         {
-                if(m_shaderType != ShaderType::VERTEX:SHADER)
+                if(m_shaderType != ShaderType::VERTEX_SHADER)
                 {
                         LOG_WARN("ShaderDescription::describeVertexAttribute() failed: the description class instance is not describing a vertex shader!");
                         return *this;
                 }
 
-                m_vertexAttributesDesc.emplace( binding, location, attributeType, offset );
+                VertexAttributeDescription desc {};
+
+                desc.bindingSlotIndex   = bindingSlotIndex;
+                desc.location           = location;
+                desc.dataType           = attributeType;
+                desc.offset             = offset;
+
+                m_vertexAttributesDesc.push_back(desc);
                 return *this;
         }
 
@@ -109,7 +122,7 @@ namespace gfxp {
         {
                 m_isBinary = false;
                 m_filePath = "";
-                m_shaderType = ShaderType::UNKNOWN;
+                m_shaderType = ShaderType::UNKNOWN_SHADER;
                 m_entryPointName = "main";
         }
 

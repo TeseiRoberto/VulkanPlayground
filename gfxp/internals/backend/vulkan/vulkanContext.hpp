@@ -15,22 +15,18 @@
 
 #include "gfxpLog.hpp"
 #include "iGraphicContext.hpp"
-#include "internals/handleManager.hpp"
 
-#include "buffers/vulkanBuffer.hpp"
-#include "buffers/vulkanBufferFactory.hpp"
-
-#include "images/vulkanImage.hpp"
-#include "images/vulkanImageFactory.hpp"
-
-#include "shaders/vulkanShader.hpp"
-#include "shaders/vulkanShaderFactory.hpp"
-
-#include "pipelines/vulkanGraphicsPipeline.hpp"
-#include "pipelines/vulkanGraphicsPipelineFactory.hpp"
-
+#include "internals/gpuResourceHandleManager.hpp"
 
 namespace gfxp::backend {
+
+
+        // Forward declarations of vulkan GPU resources objects
+        struct VulkanBuffer;
+        struct VulkanStagingBuffer;
+        struct VulkanTexture;
+        struct VulkanShader;
+        struct VulkanGraphicsPipeline;
 
 
         /**
@@ -39,7 +35,7 @@ namespace gfxp::backend {
          * Manages the connection with the Vulkan API driver, keeps track of all GPU resources
          * created through this context and maps them to API agnostic handles
         */
-        class VulkanContext : gfxp::IGraphicContext {
+        class VulkanContext : public gfxp::IGraphicContext {
         public:
 
                 /**
@@ -71,16 +67,16 @@ namespace gfxp::backend {
                 // ======================================================================
                 // GPU resources creation
                 virtual BufferHandle                    createBuffer(const size_t size, const BufferType type) override;
-                virtual ImageHandle                     createImage(const ImageDescription& imgDesc) override;
+                virtual TextureHandle                   createTexture(const TextureDescription& imgDesc) override;
                 virtual ShaderHandle                    createShader(const ShaderDescription& shaderDesc) override;
                 virtual PipelineHandle                  createGraphicsPipeline(const GraphicsPipelineDescription& pipelineDesc) override;
 
                 // ======================================================================
                 // GPU resources destruction
-                virtual void                            destroyBuffer(const BufferHandle handle) override;
-                virtual void                            destroyImage(const ImageHandle handle) override;
-                virtual void                            destroyShader(const ShaderHandle handle) override;
-                virtual void                            destroyGraphicsPipeline(const PipelineHandle handle) override;
+                virtual void                            destroyBuffer(BufferHandle& handle) override;
+                virtual void                            destroyTexture(TextureHandle& handle) override;
+                virtual void                            destroyShader(ShaderHandle& handle) override;
+                virtual void                            destroyGraphicsPipeline(PipelineHandle& handle) override;
 
                 // ======================================================================
 
@@ -112,12 +108,12 @@ namespace gfxp::backend {
                 QueueFamilyIndices      m_queueFamilyIndices;                           ///< Indices to queue families required by the context
                 VkQueue                 m_gfxQueue = VK_NULL_HANDLE;                    ///< Graphic queue to which renderers using this context submits commands
 
-                // Handle managers for GPU resources
-                HandleManager<VulkanBuffer, gfxp::BufferHandle>                 m_bufferHandlesMngr;            ///< Handle manager for vulkan buffer objects
-                HandleManager<VulkanStagingBuffer, gfxp::BufferHandle>          m_stagingBufferHandlesMngr;     ///< Handle manager for vulkan staging buffer objects
-                HandleManager<VulkanImage, gfxp::ImageHandle>                   m_imageHandlesMngr;             ///< Handle manager for vulkan image objects
-                HandleManager<VulkanShader, gfxp::ShaderHandle>                 m_shaderHandlesMngr;            ///< Handle manager for vulkan shader objects
-                HandleManager<VulkanGraphicsPipeline, gfxp::PipelineHandle>     m_gfxPipelineHandlesMngr;       ///< Handle manager for vulkan graphics pipeline objects
+                // GPU resources managed by the context
+                //gfxp::internal::GpuResourceHandleManager<VulkanBuffer*>                 m_bufferResources;              ///< Buffer and staging buffer GPU resources managed by the context
+                //gfxp::internal::GpuResourceHandleManager<VulkanTexture*>                m_textureResources;             ///< Texture GPU resources managed by the context
+                gfxp::internal::GpuResourceHandleManager<VulkanShader*>                 m_shaderResources;              ///< Shader GPU resources managed by the context
+                gfxp::internal::GpuResourceHandleManager<VulkanGraphicsPipeline*>       m_gfxPipelineResources;         ///< Graphics pipeline GPU resources managed by the context
+
 
                 static const std::vector<const char*>   REQUIRED_VALIDATION_LAYERS;     ///< Validation layers required by the renderer
         };

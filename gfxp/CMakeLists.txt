@@ -22,29 +22,31 @@ set(SRCS
         iGraphicContext.cpp
 
         shaders/shaderDescription.hpp
+        shaders/shaderDescription.cpp
         pipelines/graphicsPipelineDescription.hpp
+        pipelines/graphicsPipelineDescription.cpp
 
         # =====================================================================
         # Common internal source files
-        internals/handleManager.hpp
+        internals/gpuResourceHandleManager.hpp
 
         # =====================================================================
         # Vulkan backend specific source files
-        internals/backends/vulkan/vulkanEnumTranslator.hpp
-        internals/backends/vulkan/vulkanEnumTranslator.cpp
+        internals/backend/vulkan/vulkanEnumTranslator.hpp
+        internals/backend/vulkan/vulkanEnumTranslator.cpp
 
-        internals/backends/vulkan/vulkanContext.hpp
-        internals/backends/vulkan/vulkanContext.cpp
+        internals/backend/vulkan/vulkanContext.hpp
+        internals/backend/vulkan/vulkanContext.cpp
 
-        internals/backends/vulkan/shaders/vulkanShader.hpp
-        internals/backends/vulkan/shaders/vulkanShaderFactory.hpp
-        internals/backends/vulkan/shaders/vulkanShaderFactory.cpp
+        internals/backend/vulkan/shaders/vulkanShader.hpp
+        internals/backend/vulkan/shaders/vulkanShaderFactory.hpp
+        internals/backend/vulkan/shaders/vulkanShaderFactory.cpp
 
-        internals/backends/vulkan/pipelines/vulkanGraphicsPipeline.hpp
-        internals/backends/vulkan/pipelines/vulkanGraphicsPipelineFactory.hpp
-        internals/backends/vulkan/pipelines/vulkanGraphicsPipelineFactory.cpp
+        internals/backend/vulkan/pipelines/vulkanGraphicsPipeline.hpp
+        internals/backend/vulkan/pipelines/vulkanGraphicsPipelineFactory.hpp
+        internals/backend/vulkan/pipelines/vulkanGraphicsPipelineFactory.cpp
 )
 
 add_library(${TARGET_NAME} ${SRCS})
-target_include_directories(${TARGET_NAME} PRIVATE . ${Vulkan_INCLUDE_DIR} )
+target_include_directories(${TARGET_NAME} PRIVATE ./ ${Vulkan_INCLUDE_DIR} )
 target_link_libraries(${TARGET_NAME} ${Vulkan_LIBRARIES})

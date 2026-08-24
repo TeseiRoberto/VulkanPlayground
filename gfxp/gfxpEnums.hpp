@@ -13,10 +13,10 @@ namespace gfxp {
 
 
         /**
-         * @enum GraphicsApi
+         * @enum GraphicApi
          * Enumerates the graphics API backends supported by gfxp
         */
-        enum class GraphicsApi : uint8_t {
+        enum class GraphicApi : uint8_t {
                 VULKAN = 0                      ///< Vulkan API backend
         };
 
