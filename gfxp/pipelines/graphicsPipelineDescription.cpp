@@ -65,7 +65,7 @@ namespace gfxp {
         */
         GraphicsPipelineDescription& GraphicsPipelineDescription::setVertexShader(const ShaderHandle handle)
         {
-                if(handle == GFXP_INVALID_HANDLE)
+                if(handle == gfxp::INVALID_HANDLE)
                 {
                         LOG_ERROR("GraphicsPipelineDescription::setVertexShader() failed: handle to shader object is invalid!");
                         return *this;
@@ -84,7 +84,7 @@ namespace gfxp {
         */
         GraphicsPipelineDescription& GraphicsPipelineDescription::setFragmentShader(const ShaderHandle handle)
         {
-                if(handle == GFXP_INVALID_HANDLE)
+                if(handle == gfxp::INVALID_HANDLE)
                 {
                         LOG_ERROR("GraphicsPipelineDescription::setfragmentShader() failed: handle to shader object is invalid!");
                         return *this;
@@ -131,13 +131,13 @@ namespace gfxp {
         /**
          * @brief GraphicsPipelineDescription::getVertexShader
          * @return handle to the shader that shall be used as vertex shader for the graphics pipeline,
-         *      GFXP_INVALID_HANDLE if no vertex shader is set
+         *      gfxp::INVALID_HANDLE if no vertex shader is set
         */
         const ShaderHandle GraphicsPipelineDescription::getVertexShader() const
         {
                 auto it = m_shadersDesc.find(gfxp::ShaderType::VERTEX_SHADER);
                 if(it == m_shadersDesc.end())
-                        return GFXP_INVALID_HANDLE;
+                        return gfxp::INVALID_HANDLE;
 
                 return it->second;
         }
@@ -146,13 +146,13 @@ namespace gfxp {
         /**
          * @brief GraphicsPipelineDescription::getFragmentShader
          * @return handle to the shader that shall be used as vertex shader for the graphics pipeline,
-         *      GFXP_INVALID_HANDLE if no fragment shader is set
+         *      gfxp::INVALID_HANDLE if no fragment shader is set
         */
         const ShaderHandle GraphicsPipelineDescription::getFragmentShader() const
         {
                 auto it = m_shadersDesc.find(gfxp::ShaderType::FRAGMENT_SHADER);
                 if(it == m_shadersDesc.end())
-                        return GFXP_INVALID_HANDLE;
+                        return gfxp::INVALID_HANDLE;
 
                 return it->second;
         }

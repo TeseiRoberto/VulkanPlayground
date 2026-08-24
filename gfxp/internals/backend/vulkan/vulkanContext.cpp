@@ -76,12 +76,33 @@ namespace gfxp::backend {
         */
         void VulkanContext::terminate()
         {
+                /* TODO: Objects and factories not implemented yet!
+                // Utility lambda to correctly destroy all types of buffer resources
+                auto bufferDestroyFunc = [this](VulkanBuffer* buffer) {
+
+                                VulkanStagingBuffer* stagingBuffer = dynamic_cast<VulkanStagingBuffer*>(buffer);
+
+                                if(stagingBuffer != nullptr)
+                                {
+                                        VulkanBufferFactory::destroyStagingBuffer(stagingBuffer);
+
+                                } else {
+                                        VulkanBufferFactory::destroyBuffer(buffer);
+                                }
+                        };
+
                 // Destroy all GPU resources not destroyed yet
-                // TODO: Methods not implemented yet!
-                //m_bufferResources.applyToAll( [this](BufferHandle handle) { this->destroyBuffer(handle); } );
-                //m_textureResources.applyToAll( [this](TextureHandle handle) { this->destroyTexture(handle); } );
-                m_shaderResources.applyToAll( [this](ShaderHandle handle) { this->destroyShader(handle); } );
-                m_gfxPipelineResources.applyToAll( [this](PipelineHandle handle) { this->destroyGraphicsPipeline(handle); } );
+                m_bufferResources.applyToAll(bufferDestroyFunc);
+                m_bufferResources.clear();
+
+                m_textureResources.applyToAll( [this](VulkanTexture* texture) { VulkanTextureFactory::destroyTexture(texture); } );
+                m_textureResources.clear();*/
+
+                m_shaderResources.applyToAll( [this](VulkanShader* shader) { VulkanShaderFactory::destroyShader(shader); } );
+                m_shaderResources.clear();
+
+                m_gfxPipelineResources.applyToAll( [this](VulkanGraphicsPipeline* pipeline) { VulkanGraphicsPipelineFactory::destroyPipeline(pipeline); } );
+                m_gfxPipelineResources.clear();
 
                 // Destroy vulkan context objects
                 destroyLogicalDevice();
@@ -112,10 +133,10 @@ namespace gfxp::backend {
                 }
 
                 if(buffer == nullptr)
-                        return GFXP_INVALID_HANDLE;
+                        return gfxp::INVALID_HANDLE;
 
                 return static_cast<BufferHandle>(buffer);*/
-                return GFXP_INVALID_HANDLE;
+                return gfxp::INVALID_HANDLE;
         }
 
 
@@ -131,11 +152,11 @@ namespace gfxp::backend {
                 VulkanTexture* texture = textureFactory.createTexture(textureDesc);
 
                 if(texture == nullptr)
-                        return GFXP_INVALID_HANDLE;
+                        return gfxp::INVALID_HANDLE;
 
                 m_textureResources.add(texture);
                 return static_cast<TextureHandle>( texture );*/
-                return GFXP_INVALID_HANDLE;
+                return gfxp::INVALID_HANDLE;
         }
 
 
@@ -150,7 +171,7 @@ namespace gfxp::backend {
                 VulkanShader* shader = shaderFactory.createShader(shaderDesc);
 
                 if(shader == nullptr)
-                        return GFXP_INVALID_HANDLE;
+                        return gfxp::INVALID_HANDLE;
 
                 m_shaderResources.add(shader);
                 return static_cast<ShaderHandle>( shader );
@@ -170,7 +191,7 @@ namespace gfxp::backend {
                 VulkanGraphicsPipeline* pipeline = pipelineFactory.createPipeline(pipelineDesc, VK_NULL_HANDLE);
 
                 if(pipeline == nullptr)
-                        return GFXP_INVALID_HANDLE;
+                        return gfxp::INVALID_HANDLE;
 
                 m_gfxPipelineResources.add(pipeline);
                 return static_cast<PipelineHandle>( pipeline );
@@ -216,7 +237,7 @@ namespace gfxp::backend {
                 VulkanTexture* texture = static_cast<VulkanTexture*>(handle);
                 
                 // Try to delete the texture resource
-                if( m_textureResources.remove(texture) )
+                if( !m_textureResources.remove(texture) )
                         return;
 
                 VulkanTextureFactory::destroyTexture(texture);*/
@@ -233,7 +254,7 @@ namespace gfxp::backend {
                 VulkanShader* shader = static_cast<VulkanShader*>(handle);
 
                 // Try to delete the shader resource
-                if( m_shaderResources.remove(shader) )
+                if( !m_shaderResources.remove(shader) )
                         return;
 
                 VulkanShaderFactory::destroyShader(shader);
@@ -250,7 +271,7 @@ namespace gfxp::backend {
                 VulkanGraphicsPipeline* pipeline = static_cast<VulkanGraphicsPipeline*>(handle);
                 
                 // Try to delete the graphics pipeline resource
-                if( m_gfxPipelineResources.remove(pipeline) )
+                if( !m_gfxPipelineResources.remove(pipeline) )
                         return;
 
                 VulkanGraphicsPipelineFactory::destroyPipeline(pipeline);

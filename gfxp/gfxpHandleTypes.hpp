@@ -14,10 +14,10 @@ namespace gfxp {
 
 
         /**
-         * @brief GFXP_INVALID_HANDLE
+         * @brief INVALID_HANDLE
          * Value used to mark that an handle, to any type of GPU resource, is invalid
         */
-        constexpr std::nullptr_t GFXP_INVALID_HANDLE = nullptr;
+        constexpr std::nullptr_t INVALID_HANDLE = nullptr;
 
 
         /**

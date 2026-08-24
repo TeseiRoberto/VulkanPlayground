@@ -14,8 +14,10 @@
 */
 Renderer::Renderer(std::unique_ptr<gfxp::IGraphicContext>& context)
         : m_context(context)
+        , m_isInit(false)
 {
-        // Nothing to do here...
+        if( !m_context->isInit() )
+                LOG_WARN("Renderer::Renderer() warning: constructed Renderer using an uninitialized GraphicContext instance!");
 }
 
 
@@ -48,6 +50,8 @@ bool Renderer::init(GLFWwindow* wnd)
         CHECK( createGraphicsPipeline() )
         CHECK( createStagingBuffer() )
         CHECK( createRectangleBuffers() )
+
+        m_isInit = true;
         return true;
 }
 
@@ -58,12 +62,19 @@ bool Renderer::init(GLFWwindow* wnd)
 */
 void Renderer::terminate()
 {
-        if( !isInit() )
+        if( !m_context->isInit() )
+        {
+                if(m_isInit)
+                        LOG_ERROR("Renderer::terminate() failed: Graphic context has been terminated before the Renderer!");
+
                 return;
+        }
 
         destroyGraphicsPipeline();
         destroyStagingBuffer();
         destroyRectangleBuffers();
+
+        m_isInit = false;
 }
 
 
@@ -84,7 +95,7 @@ void Renderer::drawFrame()
 */
 bool Renderer::createGraphicsPipeline()
 {
-        if(m_gfxPipeline != gfxp::GFXP_INVALID_HANDLE)
+        if(m_gfxPipeline != gfxp::INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createGraphicsPipeline(): graphics pipeline has already been created!");
                 return true;
@@ -107,9 +118,9 @@ bool Renderer::createGraphicsPipeline()
         gfxp::ShaderHandle vrtxShader = m_context->createShader(vrtxShaderDesc);
         gfxp::ShaderHandle fragShader = m_context->createShader(fragShaderDesc);
 
-        if(vrtxShader == gfxp::GFXP_INVALID_HANDLE || fragShader == gfxp::GFXP_INVALID_HANDLE)
+        if(vrtxShader == gfxp::INVALID_HANDLE || fragShader == gfxp::INVALID_HANDLE)
         {
-                LOG_WARN("Renderer::createGraphicsPipeline() failed: creation of vertex and/or fragment shader failed!");
+                LOG_ERROR("Renderer::createGraphicsPipeline() failed: creation of vertex and/or fragment shader failed!");
                 m_context->destroyShader(vrtxShader);
                 m_context->destroyShader(fragShader);
 
@@ -127,9 +138,9 @@ bool Renderer::createGraphicsPipeline()
 
         m_gfxPipeline = m_context->createGraphicsPipeline(pipelineDesc);
 
-        if(m_gfxPipeline == gfxp::GFXP_INVALID_HANDLE)
+        if(m_gfxPipeline == gfxp::INVALID_HANDLE)
         {
-                LOG_WARN("Renderer::createGraphicsPipeline() failed: graphics pipeline creation failed!");
+                LOG_ERROR("Renderer::createGraphicsPipeline() failed: graphics pipeline creation failed!");
                 m_context->destroyShader(vrtxShader);
                 m_context->destroyShader(fragShader);
 
@@ -148,6 +159,9 @@ bool Renderer::createGraphicsPipeline()
 */
 void Renderer::destroyGraphicsPipeline()
 {
+        if(m_gfxPipeline == gfxp::INVALID_HANDLE)
+                return;
+
         m_context->destroyGraphicsPipeline(m_gfxPipeline);
 }
 
@@ -160,16 +174,16 @@ void Renderer::destroyGraphicsPipeline()
 bool Renderer::createStagingBuffer()
 {
         // Check if the buffer has already been created
-        if(m_stagingBuffer != gfxp::GFXP_INVALID_HANDLE)
+        if(m_stagingBuffer != gfxp::INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createStagingBuffer(): staging buffer has already been created!");
                 return true;
         }
 
         m_stagingBuffer = m_context->createBuffer(1024, gfxp::BufferType::STAGING_BUFFER);
-        if(m_stagingBuffer == gfxp::GFXP_INVALID_HANDLE)
+        if(m_stagingBuffer == gfxp::INVALID_HANDLE)
         {
-                LOG_WARN("Renderer::createStagingBuffer() failed: staging buffer creation failed!");
+                LOG_ERROR("Renderer::createStagingBuffer() failed: staging buffer creation failed!");
                 return false;
         }
 
@@ -183,6 +197,9 @@ bool Renderer::createStagingBuffer()
 */
 void Renderer::destroyStagingBuffer()
 {
+        if(m_stagingBuffer == gfxp::INVALID_HANDLE)
+                return;
+
         m_context->destroyBuffer(m_stagingBuffer);
 }
 
@@ -196,7 +213,7 @@ void Renderer::destroyStagingBuffer()
 bool Renderer::createRectangleBuffers()
 {
         // Check if buffer have already been created
-        if(m_rectVertexBuffer != gfxp::GFXP_INVALID_HANDLE || m_rectIndexBuffer != gfxp::GFXP_INVALID_HANDLE)
+        if(m_rectVertexBuffer != gfxp::INVALID_HANDLE || m_rectIndexBuffer != gfxp::INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createRectangleBuffers(): buffers have already been created!");
                 return true;
@@ -219,9 +236,9 @@ bool Renderer::createRectangleBuffers()
         m_rectVertexBuffer = m_context->createBuffer(sizeof(vertexData), gfxp::BufferType::VERTEX_BUFFER);
         m_rectIndexBuffer = m_context->createBuffer(sizeof(indexData), gfxp::BufferType::INDEX_BUFFER);
 
-        if(m_rectVertexBuffer == gfxp::GFXP_INVALID_HANDLE || m_rectIndexBuffer == gfxp::GFXP_INVALID_HANDLE)
+        if(m_rectVertexBuffer == gfxp::INVALID_HANDLE || m_rectIndexBuffer == gfxp::INVALID_HANDLE)
         {
-                LOG_WARN("Renderer::createRectangleBuffers() failed: vertex and/or index buffer creation failed!");
+                LOG_ERROR("Renderer::createRectangleBuffers() failed: vertex and/or index buffer creation failed!");
                 return false;
         }
 
@@ -237,7 +254,10 @@ bool Renderer::createRectangleBuffers()
 */
 void Renderer::destroyRectangleBuffers()
 {
-        m_context->destroyBuffer(m_rectVertexBuffer);
-        m_context->destroyBuffer(m_rectIndexBuffer);
+        if(m_rectVertexBuffer != gfxp::INVALID_HANDLE)
+                m_context->destroyBuffer(m_rectVertexBuffer);
+
+        if(m_rectIndexBuffer != gfxp::INVALID_HANDLE)
+                m_context->destroyBuffer(m_rectIndexBuffer);
 }
 

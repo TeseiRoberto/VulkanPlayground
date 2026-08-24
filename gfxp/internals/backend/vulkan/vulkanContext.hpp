@@ -118,6 +118,7 @@ namespace gfxp::backend {
                 static const std::vector<const char*>   REQUIRED_VALIDATION_LAYERS;     ///< Validation layers required by the renderer
         };
 
+
 } // namespace gfxp::backend
 
 #endif // GFXP_BACKEND_VULKAN_CONTEXT_H

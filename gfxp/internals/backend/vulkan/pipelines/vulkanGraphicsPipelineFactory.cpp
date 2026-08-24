@@ -24,6 +24,12 @@ namespace gfxp::backend {
                         return nullptr;
                 }
 
+                if(renderPass == VK_NULL_HANDLE)
+                {
+                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: given render pass is invalid!");
+                        return nullptr;
+                }
+
                 #define TRY_TO(x) if( !x ) \
                         return nullptr;
 
@@ -214,7 +220,7 @@ namespace gfxp::backend {
         {
                 VulkanShader* shader = static_cast<VulkanShader*>(handle);
 
-                if(handle == gfxp::GFXP_INVALID_HANDLE || !shader->isValid())
+                if(handle == gfxp::INVALID_HANDLE || !shader->isValid())
                 {
                         LOG_ERROR("VulkanGraphicsPipelineFactory::addShaderStageInfo() failed: shader handle is invalid!");
                         return false;
@@ -346,7 +352,7 @@ namespace gfxp::backend {
                 m_colorBlendingInfo.sType                       = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
                 m_colorBlendingInfo.logicOpEnable               = VK_FALSE;
                 m_colorBlendingInfo.logicOp                     = VK_LOGIC_OP_COPY;
-                m_colorBlendingInfo.attachmentCount             = 1;
+                m_colorBlendingInfo.attachmentCount             = m_colorBlendAttachments.size();
                 m_colorBlendingInfo.pAttachments                = m_colorBlendAttachments.data();
 
                 return true;
