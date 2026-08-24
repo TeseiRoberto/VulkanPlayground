@@ -20,7 +20,8 @@ add_executable(${TARGET_NAME} ${SRCS})
 target_include_directories(${TARGET_NAME} PRIVATE
         src
         src/graphics
-        ../gfxp/
+        ../
+        ../gfxp
 )
 
 target_link_libraries(${TARGET_NAME}

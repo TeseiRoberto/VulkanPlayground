@@ -84,7 +84,7 @@ void Renderer::drawFrame()
 */
 bool Renderer::createGraphicsPipeline()
 {
-        if(m_gfxPipeline != GFXP_INVALID_HANDLE)
+        if(m_gfxPipeline != gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createGraphicsPipeline(): graphics pipeline has already been created!");
                 return true;
@@ -95,19 +95,19 @@ bool Renderer::createGraphicsPipeline()
         gfxp::ShaderDescription fragShaderDesc;
 
         vrtxShaderDesc
-                .setSourceFile("../../gfxpTestBed/resources/shaders/bin/vertexShader.spv", true, ShaderType::VERTEX_SHADER)
-                .describeVertexBinding(0, gfxp::VertexInputRate::PER_VERTEX, sizeof(float) * 6)         // We only use 1 vertex buffer
-                .describeVertexAttribute(0, 0, VertexAttributeType::FLOAT_VEC3, 0)                      // Position vertex attribute
-                .describeVertexAttribute(0, 1, VertexAttributeType::FLOAT_VEC3, sizeof(float) * 3);     // Color vertex attribute
+                .setSourceFile("../../gfxpTestBed/resources/shaders/bin/vertexShader.spv", true, gfxp::ShaderType::VERTEX_SHADER)
+                .describeVertexBinding(0, gfxp::VertexInputRate::PER_VERTEX, sizeof(float) * 6)                 // We only use 1 vertex buffer
+                .describeVertexAttribute(0, 0, gfxp::VertexAttributeType::VEC3_FLOAT, 0)                        // Position vertex attribute
+                .describeVertexAttribute(0, 1, gfxp::VertexAttributeType::VEC3_FLOAT, sizeof(float) * 3);       // Color vertex attribute
 
         fragShaderDesc
-                .setSourceFile("../../gfxpTestBed/resources/shaders/bin/fragmentShader.spv", true, ShaderType::FRAGMENT_SHADER);
+                .setSourceFile("../../gfxpTestBed/resources/shaders/bin/fragmentShader.spv", true, gfxp::ShaderType::FRAGMENT_SHADER);
 
         // Create shader objects
-        gfxp::ShaderHandle vrtxShader = context->createShader(vrtxShaderDesc);
-        gfxp::ShaderHandle fragShader = context->createShader(fragShaderDesc);
+        gfxp::ShaderHandle vrtxShader = m_context->createShader(vrtxShaderDesc);
+        gfxp::ShaderHandle fragShader = m_context->createShader(fragShaderDesc);
 
-        if(vrtxShader == GFXP_INVALID_HANDLE || fragShader == GFXP_INVALID_HANDLE)
+        if(vrtxShader == gfxp::GFXP_INVALID_HANDLE || fragShader == gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createGraphicsPipeline() failed: creation of vertex and/or fragment shader failed!");
                 m_context->destroyShader(vrtxShader);
@@ -119,7 +119,7 @@ bool Renderer::createGraphicsPipeline()
         // Describe the graphics pipeline
         gfxp::GraphicsPipelineDescription pipelineDesc;
 
-        pipelineDesc.
+        pipelineDesc
                 .setViewport(0, 0, 1024, 1024)                  // TODO: Set viewport size using swapchain extent!
                 .setVertexShader(vrtxShader)
                 .setRasterizer(false, gfxp::TriangleFrontFace::FRONT_FACE_CLOCKWISE, gfxp::CullMode::NO_CULLING)
@@ -127,7 +127,7 @@ bool Renderer::createGraphicsPipeline()
 
         m_gfxPipeline = m_context->createGraphicsPipeline(pipelineDesc);
 
-        if(m_gfxPipeline == GFXP_INVALID_HANDLE)
+        if(m_gfxPipeline == gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createGraphicsPipeline() failed: graphics pipeline creation failed!");
                 m_context->destroyShader(vrtxShader);
@@ -160,14 +160,14 @@ void Renderer::destroyGraphicsPipeline()
 bool Renderer::createStagingBuffer()
 {
         // Check if the buffer has already been created
-        if(m_stagingBuffer != GFXP_INVALID_HANDLE)
+        if(m_stagingBuffer != gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createStagingBuffer(): staging buffer has already been created!");
                 return true;
         }
 
         m_stagingBuffer = m_context->createBuffer(1024, gfxp::BufferType::STAGING_BUFFER);
-        if(m_stagingBuffer == GFXP_INVALID_HANDLE)
+        if(m_stagingBuffer == gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createStagingBuffer() failed: staging buffer creation failed!");
                 return false;
@@ -196,7 +196,7 @@ void Renderer::destroyStagingBuffer()
 bool Renderer::createRectangleBuffers()
 {
         // Check if buffer have already been created
-        if(m_rectVertexBuffer != GFXP_INVALID_HANDLE || m_rectIndexBuffer != GFXP_INVALID_HANDLE)
+        if(m_rectVertexBuffer != gfxp::GFXP_INVALID_HANDLE || m_rectIndexBuffer != gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createRectangleBuffers(): buffers have already been created!");
                 return true;
@@ -219,7 +219,7 @@ bool Renderer::createRectangleBuffers()
         m_rectVertexBuffer = m_context->createBuffer(sizeof(vertexData), gfxp::BufferType::VERTEX_BUFFER);
         m_rectIndexBuffer = m_context->createBuffer(sizeof(indexData), gfxp::BufferType::INDEX_BUFFER);
 
-        if(m_rectVertexBuffer == GFXP_INVALID_HANDLE || m_rectIndexBuffer == GFXP_INVALID_HANDLE)
+        if(m_rectVertexBuffer == gfxp::GFXP_INVALID_HANDLE || m_rectIndexBuffer == gfxp::GFXP_INVALID_HANDLE)
         {
                 LOG_WARN("Renderer::createRectangleBuffers() failed: vertex and/or index buffer creation failed!");
                 return false;

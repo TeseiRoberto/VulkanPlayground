@@ -41,7 +41,7 @@ int main()
         }
 
         // Create renderer
-        vp::Renderer renderer(gfxContext);
+        Renderer renderer(gfxContext);
         if( !renderer.init(wnd) )
         {
                 gfxContext->terminate();
