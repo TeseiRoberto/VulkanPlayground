@@ -572,4 +572,34 @@ namespace gfxp::backend {
                 return true;
         }
 
+
+        /**
+         * @brief VulkanContext::findMemoryType
+         * Queries memory properties of the physical device used by the context and
+         * searches the right type of GPU memory to be used according to the given parameters
+         * @param typeFilter Bit field used to specify suitable memory types
+         * @param props Flags used to specify the properties that shall be satisfied by the memory type
+         * @return Index of the memory type (on the physical device) that shall be used,
+         *      UINT32_MAX if such memory type is not found
+        */
+        uint32_t VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props)
+        {
+                VkPhysicalDeviceMemoryProperties memProps {};
+
+                // Query memory properties of the physical device
+                vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProps);
+
+                for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
+                {
+                        if( typeFilter & (1 << i) && 
+                                (memProps.memoryTypes[i].propertyFlags & props) == props )
+                        {
+                                return i;
+                        }
+                }
+
+                return UINT32_MAX;
+        }
+
+
 } // namespace gfxp::backend

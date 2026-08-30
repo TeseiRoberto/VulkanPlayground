@@ -9,6 +9,75 @@
 namespace gfxp::backend {
 
 
+        /*!
+         * @brief VulkanEnumTranslator::translate
+         * Translate the given BufferType to a vulkan VkBufferUsageFlags value
+         * @param from Value to be translated
+         * @param to Output variable in which the translated value will be written
+         * @return True if the translation is successfull, false otherwise
+        */
+        bool VulkanEnumTranslator::translate(const gfxp::BufferType from, VkBufferUsageFlags& to)
+        {
+                switch(from)
+                {
+                        case gfxp::BufferType::STAGING_BUFFER:
+                                to = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+                                        | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                                break;
+
+                        case gfxp::BufferType::VERTEX_BUFFER:
+                                // TODO: How do we handle VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+                                to = VK_BUFFER_USAGE_TRANSFER_DST_BIT
+                                        | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                                break;
+
+                        case gfxp::BufferType::INDEX_BUFFER:
+                                // TODO: How do we handle VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+                                to = VK_BUFFER_USAGE_TRANSFER_DST_BIT
+                                        | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                                break;
+
+                        default:
+                                return false;
+                                break;
+                }
+
+                return true;
+        }
+
+
+        /*!
+         * @brief VulkanEnumTranslator::translate
+         * Translate the given BufferType to a vulkan VkMemoryPropertyFlags value
+         * @param from Value to be translated
+         * @param to Output variable in which the translated value will be written
+         * @return True if the translation is successfull, false otherwise
+        */
+        bool VulkanEnumTranslator::translate(const gfxp::BufferType from, VkMemoryPropertyFlags& to)
+        {
+                switch(from)
+                {
+                        case gfxp::BufferType::STAGING_BUFFER:
+                                to = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                                        | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                                break;
+
+                        case gfxp::BufferType::VERTEX_BUFFER:
+                                to = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                                break;
+
+                        case gfxp::BufferType::INDEX_BUFFER:
+                                to = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                                break;
+
+                        default:
+                                return false;
+                                break;
+                }
+
+                return true;
+        }
+
 
         /*!
          * @brief VulkanEnumTranslator::translate

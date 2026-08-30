@@ -27,10 +27,13 @@ namespace gfxp::backend {
 
                 /**
                  * @brief VulkanGraphicsPipeline
-                 * Struct constructor
+                 * Struct constructor, creates an invalid graphics pipeline object
                  * @param context Graphic context that owns the graphics pipeline object
                 */
-                VulkanGraphicsPipeline(VulkanContext& context) : context(context)
+                VulkanGraphicsPipeline(VulkanContext& context)
+                        : handle(VK_NULL_HANDLE)
+                        , layoutHandle(VK_NULL_HANDLE)
+                        , context(context)
                 {}
 
 

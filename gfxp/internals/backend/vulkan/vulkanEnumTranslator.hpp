@@ -19,9 +19,12 @@ namespace gfxp::backend {
         */
         class VulkanEnumTranslator {
         public:
-                // Disable instance creation
+                                // Disable instance creation
                                 VulkanEnumTranslator() = delete;
                                 ~VulkanEnumTranslator() = default;
+
+                static bool     translate(const gfxp::BufferType from, VkBufferUsageFlags& to);
+                static bool     translate(const gfxp::BufferType from, VkMemoryPropertyFlags& to);
 
                 static bool     translate(const ShaderType from, VkShaderStageFlagBits& to);
                 static bool     translateToSize(const VertexAttributeType from, size_t& to);

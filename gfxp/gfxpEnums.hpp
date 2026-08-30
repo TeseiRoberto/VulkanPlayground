@@ -25,19 +25,29 @@ namespace gfxp {
          * @enum BufferType
          * Enumerates the types of buffers supported by gfxp
         */
-        enum class BufferType : uint8_t {
-                STAGING_BUFFER = 0,             ///< Buffer as temporary storing location for CPU to GPU data transfer 
-                VERTEX_BUFFER,                  ///< GPU local buffer used to store vertex data
-                INDEX_BUFFER,                   ///< GPU local buffer used to store index data
+        enum class BufferType : uint32_t {
+                UNKNOWN = 0,                    ///< Default value
+                STAGING_BUFFER,                 ///< Buffer can be used as temporary storing location for CPU to GPU data transfer
+                VERTEX_BUFFER,                  ///< A GPU local buffer used to store vertex data
+                INDEX_BUFFER,                   ///< A GPU local buffer used to store index data
+        };
+
+        // TODO: This is a test...
+        enum BufferUsage : uint32_t {
+                UNKNOWN                 = 0,                            ///< Default value
+                TRANSFER_SRC            = 1 << 0,                       ///< Buffer is used as source for generic data transfer commands
+                TRANSFER_DST            = 1 << 1,                       ///< Buffer is used as destination for generic data transfer commands
+                VERTEX_BUFFER           = (1 << 2) | TRANSFER_DST,      ///< Buffer is used to store vertex data
+                INDEX_BUFFER            = (1 << 3) | TRANSFER_DST,      ///< Buffer is used to store index data
         };
 
 
         /**
          * @enum ShaderType
-         * Enumerates the supported types of shader
+         * Enumerates the types of shaders supported by gfxp
         */
         enum class ShaderType : uint8_t {
-                UNKNOWN_SHADER = 0,             ///< Unknown shader type, shader is not valid
+                UNKNOWN = 0,                    ///< Unknown shader type, shader is not valid
                 VERTEX_SHADER,                  ///< Vertex shader
                 FRAGMENT_SHADER,                ///< Fragment shader
         };

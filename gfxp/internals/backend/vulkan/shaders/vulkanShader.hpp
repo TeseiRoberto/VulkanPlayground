@@ -23,7 +23,7 @@ namespace gfxp::backend {
          * POD struct that models a shader object for the Vulkan API backend
         */
         struct VulkanShader {
-                gfxp::ShaderType        type = gfxp::ShaderType::UNKNOWN_SHADER;                ///< Type of shader
+                gfxp::ShaderType        type = gfxp::ShaderType::UNKNOWN;                       ///< Type of shader
                 VkShaderModule          handle = VK_NULL_HANDLE;                                ///< Handle to the shader module
                 std::string             entryPointName = "main";                                ///< Name of the entry point function of the shader
 
@@ -35,10 +35,14 @@ namespace gfxp::backend {
 
                 /**
                  * @brief VulkanShader
-                 * Struct constructor
+                 * Struct constructor, creates an invalid shader object instance
                  * @param context Graphic context that owns the shader object
                 */
-                VulkanShader(VulkanContext& context) : context(context)
+                VulkanShader(VulkanContext& context)
+                        : type(gfxp::ShaderType::UNKNOWN)
+                        , handle(VK_NULL_HANDLE)
+                        , entryPointName("main")
+                        , context(context)
                 {}
 
 

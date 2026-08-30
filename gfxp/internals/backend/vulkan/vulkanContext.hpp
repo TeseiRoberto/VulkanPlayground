@@ -86,6 +86,9 @@ namespace gfxp::backend {
                 inline VkQueue                          getGraphicsQueue()              { return m_gfxQueue; }
                 inline const QueueFamilyIndices         getQueueFamilyIndices()         { return m_queueFamilyIndices; }
 
+                // TODO: Move this somewhere else???
+                uint32_t                                findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props);
+
         private:
                 bool            createInstance(bool useValidationLayers);
                 void            destroyInstance();
