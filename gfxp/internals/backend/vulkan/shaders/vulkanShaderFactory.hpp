@@ -15,7 +15,7 @@
 #include <vulkan/vulkan.h>
 
 #include "shaders/shaderDescription.hpp"
-#include "internals/backend/vulkan/vulkanContext.hpp"
+#include "internals/backend/vulkan/vulkanDevice.hpp"
 #include "internals/backend/vulkan/vulkanEnumTranslator.hpp"
 #include "vulkanShader.hpp"
 
@@ -28,7 +28,7 @@ namespace gfxp::backend {
         */
         class VulkanShaderFactory {
         public:
-                explicit                                VulkanShaderFactory(VulkanContext& context) : m_context(context) {}
+                explicit                                VulkanShaderFactory(VulkanDevice& device) : m_device(device) {}
                                                         ~VulkanShaderFactory() = default;
 
                 VulkanShader*                           createShader(const gfxp::ShaderDescription& shaderDesc);
@@ -38,13 +38,13 @@ namespace gfxp::backend {
                 std::vector<char>                       loadFileContent(const std::filesystem::path& filePath);
 
                 VkShaderModule                          createShaderModule(const std::vector<char>& shaderBytecode);
-                static void                             destroyShaderModule(VulkanContext& context, VkShaderModule& handle);
+                static void                             destroyShaderModule(VulkanDevice& device, VkShaderModule& handle);
 
                 std::vector<VkVertexInputBindingDescription>    extractVertexBindingsDescriptions(const ShaderDescription& shaderDesc);
                 std::vector<VkVertexInputAttributeDescription>  extractVertexAttributesDescriptions(const ShaderDescription& shaderDesc);
 
 
-                VulkanContext&                          m_context;              ///< Graphic context for which the factory will create resources for
+                VulkanDevice&                          m_device;                ///< Device for which the factory will create resources for
         };
 
 

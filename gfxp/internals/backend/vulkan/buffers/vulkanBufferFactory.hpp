@@ -19,7 +19,7 @@
 namespace gfxp::backend {
 
         // Forward declarations
-        class VulkanContext;
+        class VulkanDevice;
         struct VulkanBuffer;
         struct VulkanStagingBuffer;
 
@@ -30,7 +30,7 @@ namespace gfxp::backend {
         */
         class VulkanBufferFactory {
         public:
-                explicit                VulkanBufferFactory(VulkanContext& context) : m_context(context) {}
+                explicit                VulkanBufferFactory(VulkanDevice& device) : m_device(device) {}
                                         ~VulkanBufferFactory() = default;
 
                 VulkanBuffer*           createBuffer(gfxp::BufferUsageFlags bufferUsage, size_t capacity);
@@ -40,14 +40,14 @@ namespace gfxp::backend {
                 static void             destroyStagingBuffer(VulkanStagingBuffer*& stagingBuffer);
 
         private:
-                VkBuffer                createVkBuffer(VkBufferUsageFlags usage, VkDeviceSize capacity);
-                static void             destroyVkBuffer(VulkanContext& context, VkBuffer& bufferHandle);
+                VkBuffer                createVkBuffer(VkBufferUsageFlags usage, VkDeviceSize capacity, VkMemoryRequirements& memRequirements);
+                static void             destroyVkBuffer(VulkanDevice& device, VkBuffer& bufferHandle);
 
                 VkDeviceMemory          allocateMemory(VkBuffer bufferHandle, VkMemoryPropertyFlags memFlags);
-                static void             freeMemory(VulkanContext& context, VkDeviceMemory& memoryHandle);
+                static void             freeMemory(VulkanDevice& device, VkDeviceMemory& memoryHandle);
 
 
-                VulkanContext&          m_context;              ///< Graphic context for which the factory will create resources for
+                VulkanDevice&          m_device;                ///< Device for which the factory will create resources for
         };
 
 

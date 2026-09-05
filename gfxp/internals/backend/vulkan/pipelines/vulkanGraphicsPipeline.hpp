@@ -11,7 +11,7 @@
 
 namespace gfxp::backend {
 
-        class VulkanContext;
+        class VulkanDevice;
 
 
         /**
@@ -22,18 +22,18 @@ namespace gfxp::backend {
                 VkPipeline              handle = VK_NULL_HANDLE;                ///< Handle to the vulkan pipeline object
                 VkPipelineLayout        layoutHandle = VK_NULL_HANDLE;          ///< Handle to the vulkan object that describes the resources used by the pipeline
 
-                VulkanContext&          context;                                ///< Context to which the graphics pipeline belongs to
+                VulkanDevice&           device;                                ///< Device to which the graphics pipeline belongs to
 
 
                 /**
                  * @brief VulkanGraphicsPipeline
                  * Struct constructor, creates an invalid graphics pipeline object
-                 * @param context Graphic context that owns the graphics pipeline object
+                 * @param device Device that owns the graphics pipeline object
                 */
-                VulkanGraphicsPipeline(VulkanContext& context)
+                VulkanGraphicsPipeline(VulkanDevice& device)
                         : handle(VK_NULL_HANDLE)
                         , layoutHandle(VK_NULL_HANDLE)
-                        , context(context)
+                        , device(device)
                 {}
 
 

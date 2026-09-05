@@ -12,12 +12,12 @@
 
 namespace gfxp::backend {
 
-        class VulkanContext;
+        class VulkanDevice;
 
 
         /**
          * @struct VulkanBuffer
-         * POD struct that models a buffer (allocated in GPU's memory) object for the Vulkan API backend
+         * POD struct that models a buffer object (allocated in GPU's memory) for the Vulkan API backend
          * @note The VkBuffer object defines the logical properties of a buffer (GPU memory area).
          *      In Vulkan, the actual memory area in which data gets stored must be allocated explicitly
          *      on the GPU, and then bound to the buffer object; this is done automatically by gfxp.
@@ -27,20 +27,20 @@ namespace gfxp::backend {
                 VkDeviceMemory          memory = VK_NULL_HANDLE;        ///< Handle to the memory area allocated for the buffer
                 VkDeviceSize            size = 0;                       ///< Size of the data currently stored in the buffer, expressed in bytes
                 VkDeviceSize            capacity = 0;                   ///< Capacity of the buffer, expressed in bytes
-                VulkanContext&          context;                        ///< Context to which the buffer belongs to
+                VulkanDevice&           device;                         ///< Device to which the buffer belongs to
 
 
                 /**
                  * @brief VulkanBuffer::VulkanBuffer
                  * Struct constructor, creates an invalid buffer object instance
-                 * @param context Graphic context that owns the buffer object
+                 * @param device Graphic device that owns the buffer object
                 */
-                VulkanBuffer(VulkanContext& context)
+                VulkanBuffer(VulkanDevice& device)
                         : handle(VK_NULL_HANDLE)
                         , memory(VK_NULL_HANDLE)
                         , size(0)
                         , capacity(0)
-                        , context(context)
+                        , device(device)
                 {}
 
 
@@ -75,10 +75,10 @@ namespace gfxp::backend {
                 /**
                  * @brief VulkanStagingBuffer::VulkanStagingBuffer
                  * Struct constructor, creates an invalid staging buffer object instance
-                 * @param context Graphic context that owns the staging buffer object
+                 * @param device Graphic device that owns the staging buffer object
                 */
-                VulkanStagingBuffer(VulkanContext& context)
-                        : VulkanBuffer(context)
+                VulkanStagingBuffer(VulkanDevice& device)
+                        : VulkanBuffer(device)
                         , dataPtr(nullptr)
                 {}
 

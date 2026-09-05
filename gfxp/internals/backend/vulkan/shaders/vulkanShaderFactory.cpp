@@ -17,9 +17,9 @@ namespace gfxp::backend {
         */
         VulkanShader* VulkanShaderFactory::createShader(const gfxp::ShaderDescription& shaderDesc)
         {
-                if( !m_context.isInit() )
+                if( !m_device.isInit() )
                 {
-                        LOG_ERROR("VulkanShaderFactory::createShader() failed: VulkanContext is not initialized!");
+                        LOG_ERROR("VulkanShaderFactory::createShader() failed: VulkanDevice is not initialized!");
                         return nullptr;
                 }
 
@@ -58,7 +58,7 @@ namespace gfxp::backend {
                         return nullptr;
 
                 // Create the shader object
-                VulkanShader* shader = new VulkanShader(m_context);
+                VulkanShader* shader = new VulkanShader(m_device);
 
                 shader->handle = moduleHandle;
                 shader->type = shaderDesc.getType();
@@ -87,13 +87,13 @@ namespace gfxp::backend {
                         return;
                 }
 
-                if( !shader->context.isInit() )
+                if( !shader->device.isInit() )
                 {
-                        LOG_ERROR("VulkanShaderFactory::destroyShader() failed: VulkanContext is not initialized!");
+                        LOG_ERROR("VulkanShaderFactory::destroyShader() failed: VulkanDevice is not initialized!");
                         return;
                 }
 
-                destroyShaderModule(shader->context, shader->handle);
+                destroyShaderModule(shader->device, shader->handle);
 
                 delete shader;
                 shader = nullptr;
@@ -158,9 +158,9 @@ namespace gfxp::backend {
                 moduleInfo.codeSize = shaderByteCode.size();
                 moduleInfo.pCode = reinterpret_cast<const uint32_t*>( shaderByteCode.data() );
 
-                if( vkCreateShaderModule(m_context.getLogicalDevice(), &moduleInfo, nullptr, &handle) != VK_SUCCESS )
+                if( vkCreateShaderModule(m_device.getLogicalDevice(), &moduleInfo, nullptr, &handle) != VK_SUCCESS )
                 {
-                        LOG_ERROR("VulkanShaderFactory::createShaderModule() failed: vkCreateShaderModule() failed!");
+                        LOG_ERROR("VulkanShaderFactory::createShaderModule() failed: call to vkCreateShaderModule() failed!");
                         return VK_NULL_HANDLE;
                 }
 
@@ -171,15 +171,15 @@ namespace gfxp::backend {
         /**
          * @brief VulkanShaderFactory::destroyShaderModule
          * Destroys the VkShaderModule given
-         * @param context Graphic context from which the shader module has been created
+         * @param device Graphic device from which the shader module has been created
          * @param handle Handle to the shader module to be destroyed
         */
-        void VulkanShaderFactory::destroyShaderModule(VulkanContext& context, VkShaderModule& handle)
+        void VulkanShaderFactory::destroyShaderModule(VulkanDevice& device, VkShaderModule& handle)
         {
                 if(handle == VK_NULL_HANDLE)
                         return;
 
-                vkDestroyShaderModule(context.getLogicalDevice(), handle, nullptr);
+                vkDestroyShaderModule(device.getLogicalDevice(), handle, nullptr);
                 handle = VK_NULL_HANDLE;
         }
 

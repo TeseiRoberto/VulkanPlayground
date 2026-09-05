@@ -38,6 +38,9 @@ set(SRCS
         internals/backend/vulkan/vulkanContext.hpp
         internals/backend/vulkan/vulkanContext.cpp
 
+        internals/backend/vulkan/vulkanDevice.hpp
+        internals/backend/vulkan/vulkanDevice.cpp
+
         internals/backend/vulkan/buffers/vulkanBuffer.hpp
         internals/backend/vulkan/buffers/vulkanBufferFactory.hpp
         internals/backend/vulkan/buffers/vulkanBufferFactory.cpp

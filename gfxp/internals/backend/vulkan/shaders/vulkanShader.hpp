@@ -15,7 +15,7 @@
 
 namespace gfxp::backend {
 
-        class VulkanContext;
+        class VulkanDevice;
 
 
         /**
@@ -30,19 +30,19 @@ namespace gfxp::backend {
                 std::vector<VkVertexInputBindingDescription>    vrtxBindingsDescriptions;       ///< Structs wich describes the vertex bindings (used only for vertex shaders)
                 std::vector<VkVertexInputAttributeDescription>  vrtxAttributesDescriptions;     ///< Structs wich describes the vertex attributes used by the shader (used only for vertex shaders)
 
-                VulkanContext&          context;                                                ///< Context to which the shader belongs to
+                VulkanDevice&           device;                                                 ///< Device to which the shader belongs to
 
 
                 /**
                  * @brief VulkanShader
                  * Struct constructor, creates an invalid shader object instance
-                 * @param context Graphic context that owns the shader object
+                 * @param device Device that owns the shader object
                 */
-                VulkanShader(VulkanContext& context)
+                VulkanShader(VulkanDevice& device)
                         : type(gfxp::ShaderType::UNKNOWN)
                         , handle(VK_NULL_HANDLE)
                         , entryPointName("main")
-                        , context(context)
+                        , device(device)
                 {}
 
 

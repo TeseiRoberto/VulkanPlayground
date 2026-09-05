@@ -23,7 +23,7 @@ namespace gfxp::backend {
 
         /**
          * @brief VulkanContext::REQUIRED_VALIDATION_LAYERS
-         * Validation layers required by the renderer
+         * Validation layers required by the context
          */
         const std::vector<const char*> VulkanContext::REQUIRED_VALIDATION_LAYERS = {
                 "VK_LAYER_KHRONOS_validation"
@@ -31,7 +31,7 @@ namespace gfxp::backend {
 
 
         /**
-         * @brief ~VulkanContext::VulkanContext
+         * @brief VulkanContext::~VulkanContext
          * Terminates the vulkan context if not done yet
         */
         VulkanContext::~VulkanContext()
@@ -43,7 +43,7 @@ namespace gfxp::backend {
 
         /**
          * @brief VulkanContext::init
-         * Initializes the vulkan context by creating all the basic Vk* objects necessary
+         * Initializes the vulkan context (creates the VkInstance and tries to initialize the device managed by the context)
          * @return true on success, false on failure
          * @note GLFW must be initialized before this method is called!
         */
@@ -57,26 +57,27 @@ namespace gfxp::backend {
                         return false;
                 }
 
-                #define CHECK(x) if( !x ) { terminate(); return false; }
-
+                // Try to create the VkInstance
                 if( !createInstance(useValidationLayers) )
                         return false;
 
-                CHECK( pickPhysicalDevice() )
-                CHECK( loadQueueFamilyIndices() )
-                CHECK( createLogicalDevice() )
-        
+                // Try to initialize the vulkan device managed by the context
+                if( !m_device.init(m_instance) )
+                {
+                        terminate();
+                        return false;
+                }
+
                 return true;
         }
 
 
         /**
          * @brief VulkanContext::terminate
-         * Terminates the vulkan context and destroys all remaining GPU resources
+         * Terminates the vulkan context (destroys all remaining GPU resources and terminates the device managed by the context)
         */
         void VulkanContext::terminate()
         {
-                /* TODO: Objects and factories not implemented yet!
                 // Utility lambda to correctly destroy all types of buffer resources
                 auto bufferDestroyFunc = [this](VulkanBuffer* buffer) {
 
@@ -95,6 +96,7 @@ namespace gfxp::backend {
                 m_bufferResources.applyToAll(bufferDestroyFunc);
                 m_bufferResources.clear();
 
+                /* TODO: Object and factory not implemented yet!
                 m_textureResources.applyToAll( [this](VulkanTexture* texture) { VulkanTextureFactory::destroyTexture(texture); } );
                 m_textureResources.clear();*/
 
@@ -104,9 +106,8 @@ namespace gfxp::backend {
                 m_gfxPipelineResources.applyToAll( [this](VulkanGraphicsPipeline* pipeline) { VulkanGraphicsPipelineFactory::destroyPipeline(pipeline); } );
                 m_gfxPipelineResources.clear();
 
-                // Destroy vulkan context objects
-                destroyLogicalDevice();
-                unloadQueueFamilyIndices();
+                // Terminate device and destroy VkInstance
+                m_device.terminate();
                 destroyInstance();
         }
 
@@ -119,7 +120,7 @@ namespace gfxp::backend {
         */
         BufferHandle VulkanContext::createBuffer(const size_t size, const BufferUsageFlags usage)
         {
-                VulkanBufferFactory bufferFactory(*this);
+                VulkanBufferFactory bufferFactory(m_device);
                 VulkanBuffer* buffer = nullptr;
 
                 // Create a buffer object of the correct type
@@ -147,7 +148,7 @@ namespace gfxp::backend {
         TextureHandle VulkanContext::createTexture(const TextureDescription& textureDesc)
         {
                 /* TODO: Implement factory class!
-                VulkanTextureFactory textureFactory(*this);
+                VulkanTextureFactory textureFactory(m_device);
                 VulkanTexture* texture = textureFactory.createTexture(textureDesc);
 
                 if(texture == nullptr)
@@ -166,7 +167,7 @@ namespace gfxp::backend {
         */
         ShaderHandle VulkanContext::createShader(const ShaderDescription& shaderDesc)
         {
-                VulkanShaderFactory shaderFactory(*this);
+                VulkanShaderFactory shaderFactory(m_device);
                 VulkanShader* shader = shaderFactory.createShader(shaderDesc);
 
                 if(shader == nullptr)
@@ -184,7 +185,7 @@ namespace gfxp::backend {
         */
         PipelineHandle VulkanContext::createGraphicsPipeline(const GraphicsPipelineDescription& pipelineDesc)
         {
-                VulkanGraphicsPipelineFactory pipelineFactory(*this);
+                VulkanGraphicsPipelineFactory pipelineFactory(m_device);
 
                 // TODO: Decide how to handle render passes
                 VulkanGraphicsPipeline* pipeline = pipelineFactory.createPipeline(pipelineDesc, VK_NULL_HANDLE);
@@ -288,10 +289,10 @@ namespace gfxp::backend {
                 if( useValidationLayers && !checkValidationLayersSupport() )
                         return false;
 
-                VkApplicationInfo appInfo = {};
-                appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-                appInfo.pApplicationName = "vulkanPlayground";
-                appInfo.apiVersion = VK_API_VERSION_1_3;
+                VkApplicationInfo appInfo               = {};
+                appInfo.sType                           = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+                appInfo.pApplicationName                = "vulkanPlayground";
+                appInfo.apiVersion                      = VK_API_VERSION_1_3;
 
                 // Get instance extensions required
                 uint32_t extensionCount = 0;
@@ -303,11 +304,11 @@ namespace gfxp::backend {
                         return false;
                 }
 
-                VkInstanceCreateInfo instanceInfo = {};
-                instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-                instanceInfo.pApplicationInfo = &appInfo;
-                instanceInfo.enabledExtensionCount = extensionCount;
-                instanceInfo.ppEnabledExtensionNames = extensions;
+                VkInstanceCreateInfo instanceInfo       = {};
+                instanceInfo.sType                      = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+                instanceInfo.pApplicationInfo           = &appInfo;
+                instanceInfo.enabledExtensionCount      = extensionCount;
+                instanceInfo.ppEnabledExtensionNames    = extensions;
 
                 // Enable validation layers, if necessary
                 if(useValidationLayers)
@@ -318,7 +319,7 @@ namespace gfxp::backend {
 
                 if( vkCreateInstance(&instanceInfo, nullptr, &m_instance) != VK_SUCCESS )
                 {
-                        LOG_ERROR("VulkanContext::init() failed: VkCreateInstance() failed");
+                        LOG_ERROR("VulkanContext::init() failed: call to VkCreateInstance() failed");
                         return false;
                 }
 
@@ -336,199 +337,7 @@ namespace gfxp::backend {
                         return;
 
                 vkDestroyInstance(m_instance, nullptr);
-
-                m_physDevice = VK_NULL_HANDLE;
                 m_instance = VK_NULL_HANDLE;
-        }
-
-
-        /**
-         * @brief VulkanContext::pickPhysicalDevice
-         * Enumerates physical devices and selects one to be associated to the context
-         * The physical device is a vulkan object that models a physical GPU supporting vulkan API
-         * @return True if a physical device has been chosen, false otherwise
-         * @note The physical device gets released when the VkInstance is destroyed, so there is no
-         * "releasePhysicalDevice" method in the VulkanContext class.
-        */
-        bool VulkanContext::pickPhysicalDevice()
-        {
-                // Strings used to log device type (indexed using the VkPhysicalDeviceType enum)
-                static const char* DEVICE_TYPE_STR[] = {
-                        "unknown",              // VK_PHYSICAL_DEVICE_TYPE_OTHER = 0,
-                        "integrated GPU",       // VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU = 1,
-                        "discrete GPU",         // VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU = 2,
-                        "virtual GPU",          // VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU = 3,
-                        "CPU simulated GPU"     // VK_PHYSICAL_DEVICE_TYPE_CPU = 4,
-                };
-
-                uint32_t deviceCount = 0;
-
-                if( vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr) != VK_SUCCESS )
-                {
-                        LOG_ERROR("VulkanContext::init() failed: cannot get number of available physical devices, vkEnumeratePhysicalDevices() failed!");
-                        return false;
-                }
-
-                if(deviceCount == 0)
-                {
-                        LOG_ERROR("VulkanContext::init() failed: no physical device is available!");
-                        return false;
-                }
-
-                std::vector<VkPhysicalDevice> devices(deviceCount);
-                if( vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data()) != VK_SUCCESS )
-                {
-                        LOG_ERROR("VulkanContext::init() failed: cannot get physical devices, vkEnumeratePhysicalDevices() failed!");
-                        return false;
-                }
-
-                // Pick the first available device
-                m_physDevice = devices[0];
-
-                // Log details about all the available physical devices (just for debug purpouses)
-                LOG_INFO("Available physical devices:");
-                for(auto& device : devices)
-                {
-                        VkPhysicalDeviceProperties2 props;
-                        props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-
-                        vkGetPhysicalDeviceProperties2(device, &props);
-                        
-                        LOG_INFO("Physical device:");
-                        LOG_INFO("    - vendor ID: %u",   props.properties.vendorID);
-                        LOG_INFO("    - device ID: %u",   props.properties.deviceID);
-                        LOG_INFO("    - device name: %s", props.properties.deviceName);
-                        LOG_INFO("    - device type: %s", DEVICE_TYPE_STR[props.properties.deviceType]);
-                }
-
-                return true;
-        }
-
-
-        /**
-         * @brief VulkanContext::loadQueueFamilyIndices
-         * Queries queue families supported by the physical device and tries to load indices to
-         * the family queues required by the context
-         * @return True if the physical device supports the queue families required by the context
-         * and indices to them are loaded successfully, false otherwise
-        */
-        bool VulkanContext::loadQueueFamilyIndices()
-        {
-                uint32_t queueFamilyCount = 0;
-
-                // Get number of queue families supported by the physical device
-                vkGetPhysicalDeviceQueueFamilyProperties(m_physDevice, &queueFamilyCount, nullptr);
-
-                if(queueFamilyCount == 0)
-                {
-                        LOG_ERROR("VulkanContext::init() failed: physical device, does not support any queue family!");
-                        return false;
-                }
-
-                std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-
-                // Get properties of all queue families supported by the physical device
-                vkGetPhysicalDeviceQueueFamilyProperties(m_physDevice, &queueFamilyCount, queueFamilies.data());
-
-                // Search for a queue family that support graphics operations
-                for(uint32_t i = 0; i < queueFamilyCount; ++i)
-                {
-                        // Check if current family is a graphic queue family which supports presentation to a window too
-                        if( queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT &&
-                                glfwGetPhysicalDevicePresentationSupport(m_instance, m_physDevice, i) )
-                        {
-                                m_queueFamilyIndices.graphicQueueIndex = i;
-                                break;
-                        }
-                }
-
-                return (m_queueFamilyIndices.graphicQueueIndex != UINT32_MAX);
-        }
-
-
-        /**
-         * @brief VulkanContext::unloadQueueFamilyIndices
-         * Resets the queue family indices loaded by the context to dummy values
-        */
-        void VulkanContext::unloadQueueFamilyIndices()
-        {
-                m_queueFamilyIndices.graphicQueueIndex = UINT32_MAX;
-        }
-
-
-        /**
-         * @brief VulkanContext::createLogicalDevice
-         * Creates the logical device associated to the context and retrieves handle to the necessary VkQueues
-         * @return True if a logical device has been created successfully, false otherwise
-        */
-        bool VulkanContext::createLogicalDevice()
-        {
-                // List of device extensions required by the renderer
-                std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
-                // Set features to be used (Vulkan 1.0, 1.2 and 1.3 versions)
-                VkPhysicalDeviceVulkan12Features enabledVk12Features {};
-                enabledVk12Features.sType                                       = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-                enabledVk12Features.descriptorIndexing                          = true;
-                enabledVk12Features.shaderSampledImageArrayNonUniformIndexing   = true;
-                enabledVk12Features.descriptorBindingVariableDescriptorCount    = true;
-                enabledVk12Features.runtimeDescriptorArray                      = true;
-                enabledVk12Features.bufferDeviceAddress                         = true;
-
-                VkPhysicalDeviceVulkan13Features enabledVk13Features {};
-                enabledVk13Features.sType                                       = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-                enabledVk13Features.pNext                                       = &enabledVk12Features;
-                enabledVk13Features.synchronization2                            = true;
-                enabledVk13Features.dynamicRendering                            = true;
-
-                VkPhysicalDeviceFeatures enabledVk10Features {};
-                enabledVk10Features.samplerAnisotropy                           = true;
-
-                const float queuePriorities[] = { 1.0f };
-                
-                // Create structs to describe queues required by the context
-                VkDeviceQueueCreateInfo queueInfo {};
-                queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                queueInfo.queueFamilyIndex = m_queueFamilyIndices.graphicQueueIndex;
-                queueInfo.queueCount = 1;
-                queueInfo.pQueuePriorities = queuePriorities;
-
-                // Create struct to describe the logical device to be created
-                VkDeviceCreateInfo deviceInfo {};
-                deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-                deviceInfo.pNext = &enabledVk13Features;
-                deviceInfo.queueCreateInfoCount = 1;
-                deviceInfo.pQueueCreateInfos = &queueInfo;
-                deviceInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-                deviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
-                deviceInfo.pEnabledFeatures = &enabledVk10Features;
-
-                // Create the logical device
-                if( vkCreateDevice(m_physDevice, &deviceInfo, nullptr, &m_logicDevice) != VK_SUCCESS )
-                {
-                        LOG_ERROR("VulkanContext::init() failed: logical device could not be created, vkCreateDevice() failed");
-                        return false;
-                }
-
-                // Retrieve handle to the graphic queue
-                vkGetDeviceQueue(m_logicDevice, m_queueFamilyIndices.graphicQueueIndex, 0, &m_gfxQueue);
-
-                return true;
-        }
-
-
-        /**
-         * @brief VulkanContext::destroyLogicalDevice
-         * Destroys the logical device and the queues associated to the context
-        */
-        void VulkanContext::destroyLogicalDevice()
-        {
-                if(m_logicDevice == VK_NULL_HANDLE)
-                        return;
-
-                vkDestroyDevice(m_logicDevice, nullptr);
-                m_logicDevice = VK_NULL_HANDLE;
-                m_gfxQueue = VK_NULL_HANDLE;
         }
 
 
@@ -568,35 +377,6 @@ namespace gfxp::backend {
                 }
 
                 return true;
-        }
-
-
-        /**
-         * @brief VulkanContext::findMemoryType
-         * Queries memory properties of the physical device used by the context and
-         * searches the right type of GPU memory to be used according to the given parameters
-         * @param typeFilter Bit field used to specify suitable memory types
-         * @param props Flags used to specify the properties that shall be satisfied by the memory type
-         * @return Index of the memory type (on the physical device) that shall be used,
-         *      UINT32_MAX if such memory type is not found
-        */
-        uint32_t VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props)
-        {
-                VkPhysicalDeviceMemoryProperties memProps {};
-
-                // Query memory properties of the physical device
-                vkGetPhysicalDeviceMemoryProperties(m_physDevice, &memProps);
-
-                for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
-                {
-                        if( typeFilter & (1 << i) && 
-                                (memProps.memoryTypes[i].propertyFlags & props) == props )
-                        {
-                                return i;
-                        }
-                }
-
-                return UINT32_MAX;
         }
 
 

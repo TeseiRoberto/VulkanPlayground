@@ -18,9 +18,9 @@ namespace gfxp::backend {
         */
         VulkanGraphicsPipeline* VulkanGraphicsPipelineFactory::createPipeline(const gfxp::GraphicsPipelineDescription& pipelineDesc, VkRenderPass renderPass)
         {
-                if( !m_context.isInit() )
+                if( !m_device.isInit() )
                 {
-                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: VulkanContext is not initialized!");
+                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: VulkanDevice is not initialized!");
                         return nullptr;
                 }
 
@@ -73,9 +73,9 @@ namespace gfxp::backend {
                 pipelineLayoutInfo.pushConstantRangeCount       = 0;
                 pipelineLayoutInfo.pPushConstantRanges          = nullptr;
 
-                if( vkCreatePipelineLayout(m_context.getLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayoutHandle) != VK_SUCCESS )
+                if( vkCreatePipelineLayout(m_device.getLogicalDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayoutHandle) != VK_SUCCESS )
                 {
-                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: cannot create pipeline layout, vkCreatePipelineLayout() failed!");
+                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: cannot create pipeline layout, call to vkCreatePipelineLayout() failed!");
                         return {};
                 }
 
@@ -100,16 +100,16 @@ namespace gfxp::backend {
                 pipelineInfo.basePipelineHandle         = VK_NULL_HANDLE;
                 pipelineInfo.basePipelineIndex          = -1;
                 
-                if( vkCreateGraphicsPipelines(m_context.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineHandle) != VK_SUCCESS )
+                if( vkCreateGraphicsPipelines(m_device.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineHandle) != VK_SUCCESS )
                 {
-                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: cannot create pipeline, vkCreateGraphicsPipeline() failed!");
+                        LOG_ERROR("VulkanGraphicsPipelineFactory::createPipeline() failed: cannot create pipeline, call to vkCreateGraphicsPipeline() failed!");
 
-                        vkDestroyPipelineLayout(m_context.getLogicalDevice(), pipelineLayoutHandle, nullptr);
+                        vkDestroyPipelineLayout(m_device.getLogicalDevice(), pipelineLayoutHandle, nullptr);
                         return {};
                 }
 
                 // Create the VulkanGraphicsPipeline object
-                VulkanGraphicsPipeline* pipeline = new VulkanGraphicsPipeline(m_context);
+                VulkanGraphicsPipeline* pipeline = new VulkanGraphicsPipeline(m_device);
 
                 pipeline->handle = pipelineHandle;
                 pipeline->layoutHandle = pipelineLayoutHandle;
@@ -131,16 +131,16 @@ namespace gfxp::backend {
                         return;
                 }
 
-                if( !pipeline->context.isInit() )
+                if( !pipeline->device.isInit() )
                 {
-                        LOG_ERROR("VulkanGraphicsPipelineFactory::destroyPipeline() failed: VulkanContext is not initialized!");
+                        LOG_ERROR("VulkanGraphicsPipelineFactory::destroyPipeline() failed: VulkanDevice is not initialized!");
                         return;
                 }
 
                 if(pipeline->isValid())
                 {
-                        vkDestroyPipeline(pipeline->context.getLogicalDevice(), pipeline->handle, nullptr);
-                        vkDestroyPipelineLayout(pipeline->context.getLogicalDevice(), pipeline->layoutHandle, nullptr);
+                        vkDestroyPipeline(pipeline->device.getLogicalDevice(), pipeline->handle, nullptr);
+                        vkDestroyPipelineLayout(pipeline->device.getLogicalDevice(), pipeline->layoutHandle, nullptr);
                 }
 
                 delete pipeline;
@@ -242,13 +242,6 @@ namespace gfxp::backend {
                 // If the shader is a vertex shader
                 if(shader->type == gfxp::ShaderType::VERTEX_SHADER)
                 {
-                        // Check that it has a description of its bindings and attributes
-                        if(shader->vrtxBindingsDescriptions.empty() || shader->vrtxAttributesDescriptions.empty())
-                        {
-                                LOG_ERROR("VulkanGraphicsPipelineFactory::addShaderStageInfo() failed: no vertex bindings/attributes description is specified for the vertex shader");
-                                return false;
-                        }
-
                         // Fill the vertex input info struct
                         m_vertexInputInfo.vertexBindingDescriptionCount         = shader->vrtxBindingsDescriptions.size();
                         m_vertexInputInfo.pVertexBindingDescriptions            = shader->vrtxBindingsDescriptions.data();
