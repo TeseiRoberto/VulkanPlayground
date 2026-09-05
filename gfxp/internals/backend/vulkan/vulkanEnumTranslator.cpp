@@ -11,71 +11,51 @@ namespace gfxp::backend {
 
         /*!
          * @brief VulkanEnumTranslator::translate
-         * Translate the given BufferType to a vulkan VkBufferUsageFlags value
+         * Translate the given BufferUsageFlags to a vulkan VkBufferUsageFlags value
          * @param from Value to be translated
          * @param to Output variable in which the translated value will be written
          * @return True if the translation is successfull, false otherwise
         */
-        bool VulkanEnumTranslator::translate(const gfxp::BufferType from, VkBufferUsageFlags& to)
+        bool VulkanEnumTranslator::translate(const gfxp::BufferUsageFlags from, VkBufferUsageFlags& to)
         {
-                switch(from)
+                if(from == gfxp::BufferUsage::UNKNOWN)
+                        return false;
+
+                bool result = false;
+                to = 0;
+
+                if(from & gfxp::BufferUsage::TRANSFER_SRC)
                 {
-                        case gfxp::BufferType::STAGING_BUFFER:
-                                to = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-                                        | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-                                break;
-
-                        case gfxp::BufferType::VERTEX_BUFFER:
-                                // TODO: How do we handle VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-                                to = VK_BUFFER_USAGE_TRANSFER_DST_BIT
-                                        | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-                                break;
-
-                        case gfxp::BufferType::INDEX_BUFFER:
-                                // TODO: How do we handle VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-                                to = VK_BUFFER_USAGE_TRANSFER_DST_BIT
-                                        | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-                                break;
-
-                        default:
-                                return false;
-                                break;
+                        to |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+                        result = true;
                 }
 
-                return true;
-        }
-
-
-        /*!
-         * @brief VulkanEnumTranslator::translate
-         * Translate the given BufferType to a vulkan VkMemoryPropertyFlags value
-         * @param from Value to be translated
-         * @param to Output variable in which the translated value will be written
-         * @return True if the translation is successfull, false otherwise
-        */
-        bool VulkanEnumTranslator::translate(const gfxp::BufferType from, VkMemoryPropertyFlags& to)
-        {
-                switch(from)
+                if(from & gfxp::BufferUsage::TRANSFER_DST)
                 {
-                        case gfxp::BufferType::STAGING_BUFFER:
-                                to = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                                        | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                                break;
-
-                        case gfxp::BufferType::VERTEX_BUFFER:
-                                to = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                                break;
-
-                        case gfxp::BufferType::INDEX_BUFFER:
-                                to = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                                break;
-
-                        default:
-                                return false;
-                                break;
+                        to |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                        result = true;
                 }
 
-                return true;
+                if(from & gfxp::BufferUsage::VERTEX_BUFFER)
+                {
+                        to |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                        result = true;
+                }
+
+                if(from & gfxp::BufferUsage::INDEX_BUFFER)
+                {
+                        to |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                        result = true;
+                }
+
+                if(from & gfxp::BufferUsage::STAGING_BUFFER)
+                {
+                        to |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+                        to |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                        result = true;
+                }
+
+                return result;
         }
 
 

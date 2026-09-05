@@ -73,13 +73,13 @@ namespace gfxp {
 
         private:
 
-                bool                                    m_isBinary = false;                             ///< Indicates if m_filePath contains precompiled byte code or plain source code that must be compiled
-                std::filesystem::path                   m_filePath = "";                                ///< Path to the file that contains the shader source code/precompiled byte code
-                ShaderType                              m_shaderType = ShaderType::UNKNOWN_SHADER;      ///< Type of shader that shall be created from this description
-                std::string                             m_entryPointName = "main";                      ///< Name of the function that shall be invoked as main when the shader is executed
+                bool                                    m_isBinary = false;                     ///< Indicates if m_filePath contains precompiled byte code or plain source code that must be compiled
+                std::filesystem::path                   m_filePath = "";                        ///< Path to the file that contains the shader source code/precompiled byte code
+                ShaderType                              m_shaderType = ShaderType::UNKNOWN;     ///< Type of shader that shall be created from this description
+                std::string                             m_entryPointName = "main";              ///< Name of the function that shall be invoked as main when the shader is executed
 
-                std::vector<VertexBindingDescription>   m_vertexBindingsDesc;                           ///< Structs wich describes the vertex binding points used by the shader (used only if the description is related to a vertex shader)
-                std::vector<VertexAttributeDescription> m_vertexAttributesDesc;                         ///< Structs wich describes the vertex attributes used by the shader (used only if the description is related to a vertex shader)
+                std::vector<VertexBindingDescription>   m_vertexBindingsDesc;                   ///< Structs wich describes the vertex binding points used by the shader (used only if the description is related to a vertex shader)
+                std::vector<VertexAttributeDescription> m_vertexAttributesDesc;                 ///< Structs wich describes the vertex attributes used by the shader (used only if the description is related to a vertex shader)
         };
 
 

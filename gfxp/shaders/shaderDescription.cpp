@@ -29,7 +29,7 @@ namespace gfxp {
         */
         ShaderDescription& ShaderDescription::setSourceFile(const std::filesystem::path& filePath, bool isBinary, ShaderType type)
         {
-                if(type == ShaderType::UNKNOWN_SHADER)
+                if(type == ShaderType::UNKNOWN)
                 {
                         LOG_ERROR("ShaderDescription::setSourceFile() failed: given shader type is unknown!");
                         return *this;
@@ -122,7 +122,7 @@ namespace gfxp {
         {
                 m_isBinary = false;
                 m_filePath = "";
-                m_shaderType = ShaderType::UNKNOWN_SHADER;
+                m_shaderType = ShaderType::UNKNOWN;
                 m_entryPointName = "main";
         }
 

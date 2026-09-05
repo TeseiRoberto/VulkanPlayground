@@ -38,6 +38,10 @@ set(SRCS
         internals/backend/vulkan/vulkanContext.hpp
         internals/backend/vulkan/vulkanContext.cpp
 
+        internals/backend/vulkan/buffers/vulkanBuffer.hpp
+        internals/backend/vulkan/buffers/vulkanBufferFactory.hpp
+        internals/backend/vulkan/buffers/vulkanBufferFactory.cpp
+
         internals/backend/vulkan/shaders/vulkanShader.hpp
         internals/backend/vulkan/shaders/vulkanShaderFactory.hpp
         internals/backend/vulkan/shaders/vulkanShaderFactory.cpp

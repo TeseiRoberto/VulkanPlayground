@@ -23,7 +23,7 @@ namespace gfxp::backend {
                         return nullptr;
                 }
 
-                if(shaderDesc.getType() == gfxp::ShaderType::UNKNOWN_SHADER)
+                if(shaderDesc.getType() == gfxp::ShaderType::UNKNOWN)
                 {
                         LOG_ERROR("VulkanShaderFactory::createShader() failed: UNKNOWN shader type specified!");
                         return nullptr;

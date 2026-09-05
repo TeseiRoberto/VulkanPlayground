@@ -33,19 +33,19 @@ namespace gfxp::backend {
                 explicit                VulkanBufferFactory(VulkanContext& context) : m_context(context) {}
                                         ~VulkanBufferFactory() = default;
 
-                VulkanBuffer*           createBuffer(gfxp::BufferType type, size_t capacity);
+                VulkanBuffer*           createBuffer(gfxp::BufferUsageFlags bufferUsage, size_t capacity);
                 VulkanStagingBuffer*    createStagingBuffer(size_t capacity);
 
                 static void             destroyBuffer(VulkanBuffer*& buffer);
-                static void             destroyStagingBuffer(VulkanBuffer*& buffer);
+                static void             destroyStagingBuffer(VulkanStagingBuffer*& stagingBuffer);
 
         private:
+                VkBuffer                createVkBuffer(VkBufferUsageFlags usage, VkDeviceSize capacity);
+                static void             destroyVkBuffer(VulkanContext& context, VkBuffer& bufferHandle);
 
-                VkBuffer                createBuffer(gfxp::BufferType type, size_t capacity);
-                void                    destroyBuffer(VulkanContext& context, VkBuffer& bufferHandle);
+                VkDeviceMemory          allocateMemory(VkBuffer bufferHandle, VkMemoryPropertyFlags memFlags);
+                static void             freeMemory(VulkanContext& context, VkDeviceMemory& memoryHandle);
 
-                VkMemory                allocateMemory(VkBuffer bufferHandle, gfxp::BufferType type, size_t& capacity);
-                void                    freeMemory(VulkanContext& context, VkMemory& memoryHandle)
 
                 VulkanContext&          m_context;              ///< Graphic context for which the factory will create resources for
         };

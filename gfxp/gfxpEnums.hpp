@@ -22,24 +22,20 @@ namespace gfxp {
 
 
         /**
-         * @enum BufferType
-         * Enumerates the types of buffers supported by gfxp
+         * @enum BufferUsage
+         * Enumerates all the possible usages of a buffer resource,
+         * those values can be or-ed together to create a bitmask 
         */
-        enum class BufferType : uint32_t {
-                UNKNOWN = 0,                    ///< Default value
-                STAGING_BUFFER,                 ///< Buffer can be used as temporary storing location for CPU to GPU data transfer
-                VERTEX_BUFFER,                  ///< A GPU local buffer used to store vertex data
-                INDEX_BUFFER,                   ///< A GPU local buffer used to store index data
+        enum BufferUsage : uint32_t {
+                UNKNOWN                 = 0,                                            ///< Default dummy value
+                TRANSFER_SRC            = 1 << 0,                                       ///< Buffer is used as source for generic data transfer commands
+                TRANSFER_DST            = 1 << 1,                                       ///< Buffer is used as destination for generic data transfer commands
+                VERTEX_BUFFER           = (1 << 2) | TRANSFER_DST,                      ///< Buffer is used to store vertex data
+                INDEX_BUFFER            = (1 << 3) | TRANSFER_DST,                      ///< Buffer is used to store index data
+                STAGING_BUFFER          = (1 << 4) | TRANSFER_SRC | TRANSFER_DST,       ///< Buffer is used as temporary storage for CPU to GPU, and GPU to CPU data transfer
         };
 
-        // TODO: This is a test...
-        enum BufferUsage : uint32_t {
-                UNKNOWN                 = 0,                            ///< Default value
-                TRANSFER_SRC            = 1 << 0,                       ///< Buffer is used as source for generic data transfer commands
-                TRANSFER_DST            = 1 << 1,                       ///< Buffer is used as destination for generic data transfer commands
-                VERTEX_BUFFER           = (1 << 2) | TRANSFER_DST,      ///< Buffer is used to store vertex data
-                INDEX_BUFFER            = (1 << 3) | TRANSFER_DST,      ///< Buffer is used to store index data
-        };
+        using BufferUsageFlags = uint32_t;
 
 
         /**

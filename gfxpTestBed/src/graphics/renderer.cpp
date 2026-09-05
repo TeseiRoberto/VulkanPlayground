@@ -180,7 +180,7 @@ bool Renderer::createStagingBuffer()
                 return true;
         }
 
-        m_stagingBuffer = m_context->createBuffer(1024, gfxp::BufferType::STAGING_BUFFER);
+        m_stagingBuffer = m_context->createBuffer(gfxp::BufferUsage::STAGING_BUFFER, 1024);
         if(m_stagingBuffer == gfxp::INVALID_HANDLE)
         {
                 LOG_ERROR("Renderer::createStagingBuffer() failed: staging buffer creation failed!");
@@ -233,8 +233,8 @@ bool Renderer::createRectangleBuffers()
         };
 
         // Try to create buffers
-        m_rectVertexBuffer = m_context->createBuffer(sizeof(vertexData), gfxp::BufferType::VERTEX_BUFFER);
-        m_rectIndexBuffer = m_context->createBuffer(sizeof(indexData), gfxp::BufferType::INDEX_BUFFER);
+        m_rectVertexBuffer = m_context->createBuffer(gfxp::BufferUsage::VERTEX_BUFFER | gfxp::BufferUsage::TRANSFER_DST, sizeof(vertexData));
+        m_rectIndexBuffer = m_context->createBuffer(gfxp::BufferUsage::INDEX_BUFFER | gfxp::BufferUsage::TRANSFER_DST, sizeof(indexData));
 
         if(m_rectVertexBuffer == gfxp::INVALID_HANDLE || m_rectIndexBuffer == gfxp::INVALID_HANDLE)
         {

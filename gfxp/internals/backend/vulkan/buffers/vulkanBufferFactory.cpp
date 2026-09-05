@@ -15,30 +15,39 @@ namespace gfxp::backend {
         /**
          * @brief VulkanBufferFactory::createBuffer
          * Tries to create a VulkanBuffer object with the given properties
-         * @param type Type of buffer to be created
+         * @param bufferUsage Bitmask of flags that describes the ways in which the buffer will be used
          * @param capacity Amount of memory that shall be allocated for the buffer, expressed in bytes
          * @return Pointer to a valid VulkanBuffer object on success, nullptr otherwise
         */
-        VulkanBuffer* VulkanBufferFactory::createBuffer(gfxp::BufferType type, size_t capacity)
+        VulkanBuffer* VulkanBufferFactory::createBuffer(gfxp::BufferUsageFlags bufferUsage, size_t capacity)
         {
-                if(type == gfxp::BufferType::UNKNOWN_BUFFER || type == gfxp::BufferType::STAGING_BUFFER)
+                VkBufferUsageFlags usageFlags;
+                VkMemoryPropertyFlags memPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+                if(bufferUsage & gfxp::BufferUsage::STAGING_BUFFER)
                 {
-                        LOG_ERROR("VulkanBufferFactory::createBuffer() failed: cannot create an unknown/staging buffer!");
+                        LOG_ERROR("VulkanBufferFactory::createBuffer() failed: to create a staging buffer VulkanBufferFactory::createStagingBuffer() must be used!");
+                        return nullptr;
+                }
+
+                if( !VulkanEnumTranslator::translate(bufferUsage, usageFlags) )
+                {
+                        LOG_ERROR("VulkanBufferFactory::createBuffer() failed: cannot convert BufferUsage to Vulkan enum value!");
                         return nullptr;
                 }
 
                 // Try to create the VkBuffer object
-                VkBuffer bufferHandle = createBuffer(type, capacity);
+                VkBuffer bufferHandle = createVkBuffer(usageFlags, static_cast<VkDeviceSize>(capacity));
 
                 if(bufferHandle == VK_NULL_HANDLE)
                         return nullptr;
 
                 // Try to allocate memory and bind it to the buffer
-                VkMemory memoryHandle = allocateMemory(bufferHandle, type, capacity);
+                VkDeviceMemory memoryHandle = allocateMemory(bufferHandle, memPropertyFlags);
 
                 if(memoryHandle == VK_NULL_HANDLE)
                 {
-                        destroyBuffer(bufferHandle);
+                        destroyVkBuffer(m_context, bufferHandle);
                         return nullptr;
                 }
 
@@ -62,29 +71,32 @@ namespace gfxp::backend {
         */
         VulkanStagingBuffer* VulkanBufferFactory::createStagingBuffer(size_t capacity)
         {
+                VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                VkMemoryPropertyFlags memPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ;
+
                 // Try to create the VkBuffer object
-                VkBuffer bufferHandle = createBuffer(gfxp::BufferType::STAGING_BUFFER, capacity);
+                VkBuffer bufferHandle = createVkBuffer(usageFlags, static_cast<VkDeviceSize>(capacity));
 
                 if(bufferHandle == VK_NULL_HANDLE)
                         return nullptr;
 
                 // Try to allocate memory and bind it to the buffer
-                VkMemory memoryHandle = allocateMemory(bufferHandle, gfxp::BufferType::STAGING_BUFFER, capacity);
+                VkDeviceMemory memoryHandle = allocateMemory(bufferHandle, memPropertyFlags);
 
                 if(memoryHandle == VK_NULL_HANDLE)
                 {
-                        destroyBuffer(bufferHandle);
+                        destroyVkBuffer(m_context, bufferHandle);
                         return nullptr;
                 }
 
                 // Try to map the buffer memory so that CPU can access it
-                uint8_t* mappedPtr = nullptr;
+                void* mappedPtr = nullptr;
 
                 if( vkMapMemory(m_context.getLogicalDevice(), memoryHandle, 0, VK_WHOLE_SIZE, 0, &mappedPtr) != VK_SUCCESS )
                 {
                         LOG_ERROR("VulkanBufferFactory::createStagingBuffer() failed: cannot map memory buffer, vkMapMemory() failed!");
-                        freeMemory(memoryHandle)
-                        destroyBuffer(bufferHandle);
+                        freeMemory(m_context, memoryHandle);
+                        destroyVkBuffer(m_context, bufferHandle);
 
                         return nullptr;
                 }
@@ -96,7 +108,7 @@ namespace gfxp::backend {
                 stagingBuffer->memory           = memoryHandle;
                 stagingBuffer->size             = 0;
                 stagingBuffer->capacity         = capacity;
-                stagingBuffer->dataPtr          = mappedPtr;
+                stagingBuffer->dataPtr          = static_cast<uint8_t*>(mappedPtr);
 
                 return stagingBuffer;
         }
@@ -105,6 +117,7 @@ namespace gfxp::backend {
         /**
          * @brief VulkanBufferFactory::destroyBuffer
          * Destroys and deallocates the given VulkanBuffer object
+         * @param buffer VulkanBuffer object to be destroyed 
         */
         void VulkanBufferFactory::destroyBuffer(VulkanBuffer*& buffer)
         {
@@ -121,7 +134,7 @@ namespace gfxp::backend {
                 }
 
                 freeMemory(buffer->context, buffer->memory);
-                destroyBuffer(buffer->context, buffer->handle);
+                destroyVkBuffer(buffer->context, buffer->handle);
 
                 delete buffer;
                 buffer = nullptr;
@@ -131,6 +144,7 @@ namespace gfxp::backend {
         /**
          * @brief VulkanBufferFactory::destroyStagingBuffer
          * Destroys and deallocates the given VulkanStagingBuffer object
+         * @param stagingBuffer VulkanStagingBuffer object to be destroyed 
         */
         void VulkanBufferFactory::destroyStagingBuffer(VulkanStagingBuffer*& stagingBuffer)
         {
@@ -149,12 +163,12 @@ namespace gfxp::backend {
                 // Unmap buffer's memory
                 if(stagingBuffer->dataPtr != nullptr)
                 {
-                        vkUnmapMemory(stagingBuffer->context.getLogicalDevice(), buffer->memory);
+                        vkUnmapMemory(stagingBuffer->context.getLogicalDevice(), stagingBuffer->memory);
                         stagingBuffer->dataPtr = nullptr;
                 }
 
                 freeMemory(stagingBuffer->context, stagingBuffer->memory);
-                destroyBuffer(stagingBuffer->context, stagingBuffer->handle);
+                destroyVkBuffer(stagingBuffer->context, stagingBuffer->handle);
 
                 delete stagingBuffer;
                 stagingBuffer = nullptr;
@@ -162,33 +176,25 @@ namespace gfxp::backend {
 
 
         /**
-         * @brief VulkanBufferFactory::createBuffer
+         * @brief VulkanBufferFactory::createVkBuffer
          * Tries to create a VkBuffer object
-         * @param type Type of buffer to be created
+         * @param Usage Bitmask of flags that describes how the buffer will be used
          * @param capacity Amount of memory that shall be allocated for the buffer, expressed in bytes
          * @return An handle to a valid VkBuffer on success, VK_NULL_HANDLE otherwise
         */
-        VkBuffer VulkanBufferFactory::createBuffer(gfxp::BufferType type, size_t capacity)
+        VkBuffer VulkanBufferFactory::createVkBuffer(VkBufferUsageFlags usage, VkDeviceSize capacity)
         {
-                VkBufferUsageFlags bufferUsage;
-
                 if(capacity == 0)
                 {
-                        LOG_ERROR("VulkanBufferFactory::createBuffer() failed: cannot create a buffer with 0 bytes of capacity!");
-                        return VK_NULL_HANDLE;
-                }
-
-                if( !VulkanEnumTranslator::translate(type, bufferUsage) )
-                {
-                        LOG_ERROR("VulkanBufferFactory::createBuffer() failed: cannot convert BufferType to Vulkan enum value!");
+                        LOG_ERROR("VulkanBufferFactory::createVkBuffer() failed: cannot create a buffer with 0 bytes of capacity!");
                         return VK_NULL_HANDLE;
                 }
 
                 VkBufferCreateInfo bufferInfo {};
 
                 bufferInfo.sType        = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-                bufferInfo.size         = static_cast<VkDeviceSize>(capacity);
-                bufferInfo.usage        = bufferUsage;
+                bufferInfo.size         = capacity;
+                bufferInfo.usage        = usage;
                 bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;            // TODO: Handle shared buffers
 
                 // Try to create the VkBuffer object
@@ -196,7 +202,7 @@ namespace gfxp::backend {
 
                 if( vkCreateBuffer(m_context.getLogicalDevice(), &bufferInfo, nullptr, &bufferHandle) != VK_SUCCESS )
                 {
-                        LOG_ERROR("VulkanBufferFactory::createBuffer() failed: vkCreateBuffer() failed!");
+                        LOG_ERROR("VulkanBufferFactory::createVkBuffer() failed: vkCreateBuffer() failed!");
                         return VK_NULL_HANDLE;
                 }
 
@@ -205,12 +211,12 @@ namespace gfxp::backend {
 
 
         /**
-         * @brief VulkanBufferFactory::destroyBuffer
+         * @brief VulkanBufferFactory::destroyVkBuffer
          * Destroys the given VkBuffer
          * @param context Graphic context from which the buffer has been created
          * @param bufferHandle Handle to the VkBuffer to be destroyed
         */
-        void VulkanBufferFactory::destroyBuffer(VulkanContext& context, VkBuffer& bufferHandle)
+        void VulkanBufferFactory::destroyVkBuffer(VulkanContext& context, VkBuffer& bufferHandle)
         {
                 if(bufferHandle == VK_NULL_HANDLE)
                         return;
@@ -224,34 +230,29 @@ namespace gfxp::backend {
          * @brief VulkanBufferFactory::allocateMemory
          * Allocates memory for the specified VkBuffer
          * @param bufferHandle Handle to the VkBuffer for which memory must be allocated
-         * @param type Type of buffer for which memory myst be allocated (used to determine memory properties)
-         * @param capacity Amount of memory that shall be allocated for the buffer, expressed in bytes
+         * @param memFlags Bitmask of flags that describes the properties of the memory area that shall be allocated
          * @return An handle to a valid VkMemory on success, VK_NULL_HANDLE otherwise
         */
-        VkMemory VulkanBufferFactory::allocateMemory(VkBuffer bufferHandle, gfxp::BufferType type, size_t& capacity)
+        VkDeviceMemory VulkanBufferFactory::allocateMemory(VkBuffer bufferHandle, VkMemoryPropertyFlags memFlags)
         {
                 if(bufferHandle == VK_NULL_HANDLE)
-                        return VK_NULL_HANDLE;
-
-                VkMemoryPropertyFlags memFlags;
-                if( !VulkanEnumTranslator::translate(type, memFlags) )
                 {
-                        LOG_ERROR("VulkanBufferFactory::allocateMemory() failed: cannot convert BufferType to Vulkan enum value!");
+                        LOG_ERROR("VulkanBufferFactory::allocateMemory() failed: given VkBuffer is null!");
                         return VK_NULL_HANDLE;
                 }
 
                 // Retrieve memory requirements for the buffer
-                VulkanMemoryRequirements bufferMemRequirements {};
+                VkMemoryRequirements bufferMemRequirements {};
                 vkGetBufferMemoryRequirements(m_context.getLogicalDevice(), bufferHandle, &bufferMemRequirements);
         
                 VkMemoryAllocateInfo memAllocInfo {};
 
                 memAllocInfo.sType              = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
                 memAllocInfo.allocationSize     = bufferMemRequirements.size;
-                memAllocInfo.memoryTypeIndex    = m_context.findMemoryType( bufferMemRequirements.memoryTypeBits, flags );
+                memAllocInfo.memoryTypeIndex    = m_context.findMemoryType( bufferMemRequirements.memoryTypeBits, memFlags );
         
                 // Try to allocate memory for the buffer
-                VkMemory memoryHandle = VK_NULL_HANDLE;
+                VkDeviceMemory memoryHandle = VK_NULL_HANDLE;
 
                 if( vkAllocateMemory(m_context.getLogicalDevice(), &memAllocInfo, nullptr, &memoryHandle) != VK_SUCCESS )
                 {
@@ -272,7 +273,7 @@ namespace gfxp::backend {
          * @param context Graphic context from which the memory has been allocated
          * @param memoryHandle Handle to the VkMemory to be freed
         */
-        void VulkanBufferFactory::freeMemory(VulkanContext& context, VkMemory& memoryHandle)
+        void VulkanBufferFactory::freeMemory(VulkanContext& context, VkDeviceMemory& memoryHandle)
         {
                 if(memoryHandle == VK_NULL_HANDLE)
                         return;

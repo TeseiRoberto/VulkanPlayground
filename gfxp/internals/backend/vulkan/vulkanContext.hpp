@@ -66,7 +66,7 @@ namespace gfxp::backend {
 
                 // ======================================================================
                 // GPU resources creation
-                virtual BufferHandle                    createBuffer(const size_t size, const BufferType type) override;
+                virtual BufferHandle                    createBuffer(const size_t size, const BufferUsageFlags usage) override;
                 virtual TextureHandle                   createTexture(const TextureDescription& imgDesc) override;
                 virtual ShaderHandle                    createShader(const ShaderDescription& shaderDesc) override;
                 virtual PipelineHandle                  createGraphicsPipeline(const GraphicsPipelineDescription& pipelineDesc) override;
@@ -112,7 +112,7 @@ namespace gfxp::backend {
                 VkQueue                 m_gfxQueue = VK_NULL_HANDLE;                    ///< Graphic queue to which renderers using this context submits commands
 
                 // GPU resources managed by the context
-                //gfxp::internal::GpuResourceHandleManager<VulkanBuffer*>                 m_bufferResources;              ///< Buffer and staging buffer GPU resources managed by the context
+                gfxp::internal::GpuResourceHandleManager<VulkanBuffer*>                 m_bufferResources;              ///< Buffer and staging buffer GPU resources managed by the context
                 //gfxp::internal::GpuResourceHandleManager<VulkanTexture*>                m_textureResources;             ///< Texture GPU resources managed by the context
                 gfxp::internal::GpuResourceHandleManager<VulkanShader*>                 m_shaderResources;              ///< Shader GPU resources managed by the context
                 gfxp::internal::GpuResourceHandleManager<VulkanGraphicsPipeline*>       m_gfxPipelineResources;         ///< Graphics pipeline GPU resources managed by the context

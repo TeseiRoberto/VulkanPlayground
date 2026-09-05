@@ -6,9 +6,9 @@
 
 #include "vulkanContext.hpp"
 
-//#include "buffers/vulkanBuffer.hpp"
-//#include "buffers/vulkanBufferFactory.hpp"
-//
+#include "buffers/vulkanBuffer.hpp"
+#include "buffers/vulkanBufferFactory.hpp"
+
 //#include "textures/vulkanTexture.hpp"
 //#include "textures/vulkanTextureFactory.hpp"
 
@@ -114,29 +114,28 @@ namespace gfxp::backend {
         /**
          * @brief VulkanContext::createBuffer
          * @param size Size, expressed in bytes, of the buffer to be created
-         * @param type Type of buffer to be created
+         * @param usage Bitmask that decsribes the ways in which the buffer will be used
          * @return A valid handle (pointer) to a VulkanBuffer object on success, an invalid handle otherwise
         */
-        BufferHandle VulkanContext::createBuffer(const size_t size, const BufferType type)
+        BufferHandle VulkanContext::createBuffer(const size_t size, const BufferUsageFlags usage)
         {
-                /* TODO: Implement factory class!
                 VulkanBufferFactory bufferFactory(*this);
                 VulkanBuffer* buffer = nullptr;
 
                 // Create a buffer object of the correct type
-                if(type == gfxp::BufferType::STAGING_BUFFER)
+                if(usage & gfxp::BufferUsage::STAGING_BUFFER)
                 {
                         buffer = bufferFactory.createStagingBuffer(size);
 
                 } else {
-                        buffer = bufferFactory.createBuffer(size, type);
+                        buffer = bufferFactory.createBuffer(size, usage);
                 }
 
                 if(buffer == nullptr)
                         return gfxp::INVALID_HANDLE;
 
-                return static_cast<BufferHandle>(buffer);*/
-                return gfxp::INVALID_HANDLE;
+                m_bufferResources.add(buffer);
+                return static_cast<BufferHandle>(buffer);
         }
 
 
@@ -206,11 +205,10 @@ namespace gfxp::backend {
         */
         void VulkanContext::destroyBuffer(BufferHandle& handle)
         {
-                /* TODO: Implement factory class!
                 VulkanBuffer* buffer = static_cast<VulkanBuffer*>(handle);
 
                 // Try to delete the buffer resource
-                if( !m_bufferResources.remove(handle) )
+                if( !m_bufferResources.remove(buffer) )
                         return;
 
                 VulkanStagingBuffer* stagingBuffer = dynamic_cast<VulkanStagingBuffer*>(buffer);
@@ -222,7 +220,7 @@ namespace gfxp::backend {
 
                 } else {
                         VulkanBufferFactory::destroyBuffer(buffer);
-                }*/
+                }
         }
 
 
@@ -587,7 +585,7 @@ namespace gfxp::backend {
                 VkPhysicalDeviceMemoryProperties memProps {};
 
                 // Query memory properties of the physical device
-                vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProps);
+                vkGetPhysicalDeviceMemoryProperties(m_physDevice, &memProps);
 
                 for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
                 {

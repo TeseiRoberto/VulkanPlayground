@@ -23,7 +23,6 @@ namespace gfxp::backend {
          *      on the GPU, and then bound to the buffer object; this is done automatically by gfxp.
         */
         struct VulkanBuffer {
-        
                 VkBuffer                handle = VK_NULL_HANDLE;        ///< Handle to the buffer object
                 VkDeviceMemory          memory = VK_NULL_HANDLE;        ///< Handle to the memory area allocated for the buffer
                 VkDeviceSize            size = 0;                       ///< Size of the data currently stored in the buffer, expressed in bytes
@@ -46,6 +45,13 @@ namespace gfxp::backend {
 
 
                 /**
+                 * @brief VulkanBuffer::~VulkanBuffer
+                 * Virtual destructor
+                */
+                virtual ~VulkanBuffer() {}
+
+
+                /**
                  * @brief VulkanBuffer::isValid
                  * Utility method to check if the object is correctly initialized or not
                 */
@@ -58,12 +64,12 @@ namespace gfxp::backend {
 
         /**
          * @struct VulkanStagingBuffer
-         * POD struct that models a staging buffer object for the Vulkan API backend
+         * POD struct that models a staging buffer object for the Vulkan API backend.
          * A staging buffer is a buffer that gets used as temporary storage to upload data from CPU to GPU, or download data from GPU to CPU.
          * Such buffer object is associated to a memory area which is host visible (accessible by both CPU and GPU) and host coherent.
         */
         struct VulkanStagingBuffer : VulkanBuffer {
-                uint8_t*                rawPtr = nullptr;       ///< Pointer to the mapped memory area allocated for the staging buffer
+                uint8_t*        dataPtr = nullptr;       ///< Pointer to the mapped memory area allocated for the staging buffer
 
 
                 /**
@@ -75,6 +81,13 @@ namespace gfxp::backend {
                         : VulkanBuffer(context)
                         , dataPtr(nullptr)
                 {}
+
+
+                /**
+                 * @brief VulkanStagingBuffer::~VulkanStagingBuffer
+                 * Virtual destructor
+                */
+                virtual ~VulkanStagingBuffer() {}
         };
 
 

@@ -47,7 +47,7 @@ namespace gfxp {
 
                 // ====================================================================================================
                 // GPU resources creation
-                virtual BufferHandle                    createBuffer(const size_t size, const BufferType type) = 0;
+                virtual BufferHandle                    createBuffer(const size_t size, const BufferUsageFlags usage) = 0;
                 virtual TextureHandle                   createTexture(const TextureDescription& textureDesc) = 0;
                 virtual ShaderHandle                    createShader(const ShaderDescription& shaderDesc) = 0;
                 virtual PipelineHandle                  createGraphicsPipeline(const GraphicsPipelineDescription& shaderDesc) = 0;
