@@ -61,7 +61,7 @@ namespace gfxp {
                                                         ~GraphicsPipelineDescription() = default;
 
                 GraphicsPipelineDescription&            setViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-                GraphicsPipelineDescription&            setPrimitiveTopologyType(PrimitiveTopologyType primitiveType);
+                GraphicsPipelineDescription&            setPrimitiveType(PrimitiveType primitiveType);
 
                 GraphicsPipelineDescription&            setVertexShader(const ShaderHandle handle);
                 GraphicsPipelineDescription&            setFragmentShader(const ShaderHandle handle);
@@ -75,7 +75,7 @@ namespace gfxp {
 
                 inline const bool                       isViewportSet() const                   { return m_isViewportSet; }
                 inline const ViewportDescription&       getViewportDescription() const          { return m_viewportDesc; }
-                inline const PrimitiveTopologyType&     getPrimitiveTopologyType() const        { return m_primitiveType; }
+                inline const PrimitiveType&             getPrimitiveType() const        { return m_primitiveType; }
                 const ShaderHandle                      getVertexShader() const;
                 const ShaderHandle                      getFragmentShader() const;
                 inline const RasterizerDescription      getRasterizerDescription() const        { return m_rasterizerDesc; }
@@ -86,7 +86,7 @@ namespace gfxp {
         private:
                 bool                                    m_isViewportSet = false;                                ///< Indicates if the setViewport method has been called or not
                 ViewportDescription                     m_viewportDesc = {};                                    ///< Struct that describes the viewport
-                PrimitiveTopologyType                   m_primitiveType = PrimitiveTopologyType::TRIANGLE_LIST; ///< Type of primitive graphic shapes that the pipeline shall render
+                PrimitiveType                           m_primitiveType = PrimitiveType::TRIANGLE_LIST;         ///< Type of primitive graphic shapes that the pipeline shall render
                 std::map<ShaderType, ShaderHandle>      m_shadersDesc;                                          ///< Indicates shaders to be used for the programmable stages of the graphics pipeline
                 RasterizerDescription                   m_rasterizerDesc = {};                                  ///< Struct that describes properties for the fixed rasterization stage of the graphics pipeline
                 DepthTestDescription                    m_depthTestDesc = {};                                   ///< Struct that describes if and how depth test shall be performed by the graphics pipeline

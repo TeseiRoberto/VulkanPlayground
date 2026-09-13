@@ -38,7 +38,7 @@ namespace gfxp::backend {
 
                 // Try to extract all properties necessary to create the graphics pipeline
                 TRY_TO( fillViewportInfo(pipelineDesc) )
-                TRY_TO( fillInputAssemblyInfo(pipelineDesc.getPrimitiveTopologyType()) )
+                TRY_TO( fillInputAssemblyInfo(pipelineDesc.getPrimitiveType()) )
 
                 TRY_TO( addShaderStageInfo(pipelineDesc.getVertexShader()) )
                 TRY_TO( addShaderStageInfo(pipelineDesc.getFragmentShader()) )
@@ -198,11 +198,11 @@ namespace gfxp::backend {
          * @param primitiveType Type of primitive topology that shall be rendered by the graphics pipeline
          * @return True on success, false otherwise
         */
-        bool VulkanGraphicsPipelineFactory::fillInputAssemblyInfo(const gfxp::PrimitiveTopologyType primitiveType)
+        bool VulkanGraphicsPipelineFactory::fillInputAssemblyInfo(const gfxp::PrimitiveType primitiveType)
         {
                 if( !VulkanEnumTranslator::translate( primitiveType, m_inputAssemblyInfo.topology ) )
                 {
-                        LOG_ERROR("VulkanGraphicsPipelineFactory::fillInputAssemblyInfo() failed: cannot convert PrimitiveTopologyType to Vulkan enum value!");
+                        LOG_ERROR("VulkanGraphicsPipelineFactory::fillInputAssemblyInfo() failed: cannot convert PrimitiveType to Vulkan enum value!");
                         return false;
                 }
 

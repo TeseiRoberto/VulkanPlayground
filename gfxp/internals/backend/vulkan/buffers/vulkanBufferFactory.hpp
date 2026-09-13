@@ -43,10 +43,6 @@ namespace gfxp::backend {
                 VkBuffer                createVkBuffer(VkBufferUsageFlags usage, VkDeviceSize capacity, VkMemoryRequirements& memRequirements);
                 static void             destroyVkBuffer(VulkanDevice& device, VkBuffer& bufferHandle);
 
-                VkDeviceMemory          allocateMemory(VkBuffer bufferHandle, VkMemoryPropertyFlags memFlags);
-                static void             freeMemory(VulkanDevice& device, VkDeviceMemory& memoryHandle);
-
-
                 VulkanDevice&          m_device;                ///< Device for which the factory will create resources for
         };
 

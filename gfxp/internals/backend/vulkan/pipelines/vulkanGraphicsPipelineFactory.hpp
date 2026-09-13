@@ -36,7 +36,7 @@ namespace gfxp::backend {
 
         private:
                 bool                    fillViewportInfo(const gfxp::GraphicsPipelineDescription& pipelineDesc);
-                bool                    fillInputAssemblyInfo(const gfxp::PrimitiveTopologyType primitiveType);
+                bool                    fillInputAssemblyInfo(const gfxp::PrimitiveType primitiveType);
 
                 bool                    addShaderStageInfo(const gfxp::ShaderHandle handle);
 

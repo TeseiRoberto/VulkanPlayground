@@ -45,12 +45,12 @@ namespace gfxp {
 
 
         /**
-         * @brief GraphicsPipelineDescription::setPrimitiveTopologyType
+         * @brief GraphicsPipelineDescription::setPrimitiveType
          * Sets the type of primitive topology that will be rendered by the pipeline created using this description instance
          * @param primitiveType Primitive topology type that will be rendered by the pipeline
          * @return Reference to this description class instance, so that calls to methods can be concatenated
         */
-        GraphicsPipelineDescription& GraphicsPipelineDescription::setPrimitiveTopologyType(PrimitiveTopologyType primitiveType)
+        GraphicsPipelineDescription& GraphicsPipelineDescription::setPrimitiveType(PrimitiveType primitiveType)
         {
                 m_primitiveType = primitiveType;
                 return *this;
@@ -181,7 +181,7 @@ namespace gfxp {
                 m_viewportDesc = {};
 
                 // Reset primitive topology type
-                m_primitiveType = PrimitiveTopologyType::TRIANGLE_LIST;
+                m_primitiveType = PrimitiveType::TRIANGLE_LIST;
 
                 // Reset programmable shader stages descriptions
                 m_shadersDesc.clear();

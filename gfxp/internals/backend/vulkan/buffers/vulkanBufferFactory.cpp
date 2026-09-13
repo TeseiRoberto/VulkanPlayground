@@ -125,7 +125,7 @@ namespace gfxp::backend {
         {
                 if(buffer == nullptr)
                 {
-                        LOG_ERROR("VulkanBufferFactory::destroyBuffer() failed: buffer is not valid!");
+                        LOG_ERROR("VulkanBufferFactory::destroyBuffer() failed: given buffer is invalid!");
                         return;
                 }
 
@@ -135,8 +135,8 @@ namespace gfxp::backend {
                         return;
                 }
 
-                buffer->device.freeMemory( buffer->memory );
                 destroyVkBuffer(buffer->device, buffer->handle);
+                buffer->device.freeMemory( buffer->memory );
 
                 delete buffer;
                 buffer = nullptr;
@@ -169,8 +169,8 @@ namespace gfxp::backend {
                         stagingBuffer->dataPtr = nullptr;
                 }
 
-                stagingBuffer->device.freeMemory( stagingBuffer->memory );
                 destroyVkBuffer(stagingBuffer->device, stagingBuffer->handle);
+                stagingBuffer->device.freeMemory( stagingBuffer->memory );
 
                 delete stagingBuffer;
                 stagingBuffer = nullptr;
@@ -219,7 +219,7 @@ namespace gfxp::backend {
         /**
          * @brief VulkanBufferFactory::destroyVkBuffer
          * Destroys the given VkBuffer
-         * @param device Graphic device from which the buffer has been created
+         * @param device Device from which the buffer has been created
          * @param bufferHandle Handle to the VkBuffer to be destroyed
         */
         void VulkanBufferFactory::destroyVkBuffer(VulkanDevice& device, VkBuffer& bufferHandle)

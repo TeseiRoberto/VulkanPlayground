@@ -33,7 +33,7 @@ namespace gfxp::backend {
                 /**
                  * @brief VulkanBuffer::VulkanBuffer
                  * Struct constructor, creates an invalid buffer object instance
-                 * @param device Graphic device that owns the buffer object
+                 * @param device Device that owns the buffer object
                 */
                 VulkanBuffer(VulkanDevice& device)
                         : handle(VK_NULL_HANDLE)
@@ -75,7 +75,7 @@ namespace gfxp::backend {
                 /**
                  * @brief VulkanStagingBuffer::VulkanStagingBuffer
                  * Struct constructor, creates an invalid staging buffer object instance
-                 * @param device Graphic device that owns the staging buffer object
+                 * @param device Device that owns the staging buffer object
                 */
                 VulkanStagingBuffer(VulkanDevice& device)
                         : VulkanBuffer(device)

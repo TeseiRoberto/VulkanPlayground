@@ -233,8 +233,8 @@ bool Renderer::createRectangleBuffers()
         };
 
         // Try to create buffers
-        m_rectVertexBuffer = m_context->createBuffer(gfxp::BufferUsage::VERTEX_BUFFER | gfxp::BufferUsage::TRANSFER_DST, sizeof(vertexData));
-        m_rectIndexBuffer = m_context->createBuffer(gfxp::BufferUsage::INDEX_BUFFER | gfxp::BufferUsage::TRANSFER_DST, sizeof(indexData));
+        m_rectVertexBuffer = m_context->createBuffer(gfxp::BufferUsage::VERTEX_BUFFER | gfxp::BufferUsage::TRANSFER_DST_BUFFER, sizeof(vertexData));
+        m_rectIndexBuffer = m_context->createBuffer(gfxp::BufferUsage::INDEX_BUFFER | gfxp::BufferUsage::TRANSFER_DST_BUFFER, sizeof(indexData));
 
         if(m_rectVertexBuffer == gfxp::INVALID_HANDLE || m_rectIndexBuffer == gfxp::INVALID_HANDLE)
         {
